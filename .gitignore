@@ -37,3 +37,6 @@ obj/
 
 # Google Services (may contain API keys)
 google-services.json
+
+# Eclipse
+/.project

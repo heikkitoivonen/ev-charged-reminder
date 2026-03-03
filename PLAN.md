@@ -36,6 +36,7 @@ A free, open-source (MIT) Android app that automatically detects when a user is 
 | trim | String? | Optional |
 | isHybrid | Boolean | Affects default charge assumptions |
 | batteryCapacityKwh | Double | Max usable battery capacity |
+| maxAcceptRateKw | Double? | Max AC charge rate the onboard charger accepts; null = estimate from battery size |
 | defaultStartPct | Int | Default: 20% (EV) / 0% (Hybrid) |
 | defaultTargetPct | Int | Default: 80% (EV) / 100% (Hybrid) |
 | isFavorite | Boolean | Exactly one car is favorite |
@@ -55,20 +56,25 @@ A free, open-source (MIT) Android app that automatically detects when a user is 
 | createdAt | Instant | |
 
 #### Charger Type Presets
-| Label | Voltage | Amps | Power (kW) |
-|---|---|---|---|
-| Standard Household Outlet (120V/12A) | 120 | 12 | 1.4 |
-| 120V / 20A Outlet | 120 | 20 | 2.4 |
-| 240V / 20A (Dryer-style) | 240 | 20 | 4.8 |
-| 240V / 30A Outlet | 240 | 30 | 7.2 |
-| 240V / 50A Outlet | 240 | 50 | 12.0 |
-| Level 2 EVSE (32A) | 240 | 32 | 7.7 |
-| Level 2 EVSE (48A) | 240 | 48 | 11.5 |
-| Level 2 EVSE (80A) | 240 | 80 | 19.2 |
-| DC Fast Charger (50 kW) | — | — | 50.0 |
-| DC Fast Charger (150 kW) | — | — | 150.0 |
-| DC Fast Charger (350 kW) | — | — | 350.0 |
-| Custom | — | — | User-entered |
+
+Outlet-based presets use **NEC 80% continuous load derating** (amps and power
+reflect the derated value, not the circuit rating). EVSE presets show their
+rated output, which already accounts for circuit sizing.
+
+| Label | Category | Voltage | Continuous Amps | Power (kW) |
+|---|---|---|---|---|
+| Standard Household Outlet (15A circuit) | AC | 120 | 12 | 1.4 |
+| 120V / 20A Outlet | AC | 120 | 16 | 1.9 |
+| 240V / 20A Outlet | AC | 240 | 16 | 3.8 |
+| 240V / 30A Outlet | AC | 240 | 24 | 5.8 |
+| 240V / 50A Outlet | AC | 240 | 40 | 9.6 |
+| Level 2 EVSE (32A) | AC | 240 | 32 | 7.7 |
+| Level 2 EVSE (48A) | AC | 240 | 48 | 11.5 |
+| Level 2 EVSE (80A) | AC | 240 | 80 | 19.2 |
+| DC Fast Charger (50 kW) | DC | — | — | 50.0 |
+| DC Fast Charger (150 kW) | DC | — | — | 150.0 |
+| DC Fast Charger (350 kW) | DC | — | — | 350.0 |
+| Custom | User picks | — | — | User-entered |
 
 ### ChargingSession
 | Field | Type | Notes |
@@ -88,22 +94,52 @@ A free, open-source (MIT) Android app that automatically detects when a user is 
 
 ## Charging Curve Model
 
-We approximate real-world EV charging curves with a **piecewise model**:
+The charging curve depends on the **charger category**. Each charger type preset
+maps to one of two categories:
+
+| Category | Charger Types |
+|---|---|
+| **AC** (Level 1 & Level 2) | All outlet-based and Level 2 EVSE presets |
+| **DC** (Fast Charging) | All DC Fast Charger presets |
+| Custom | User specifies AC or DC when selecting Custom |
+
+### AC Charging (Level 1 & Level 2)
+
+AC charging is bottlenecked by the car's onboard charger, which draws at a
+**constant rate** regardless of battery SOC. The effective rate is simply
+`min(chargerMaxKw, carMaxAcceptRateKw)` applied uniformly from start to target.
 
 ```
-0%–20%:   ~85% of max charger rate (battery warm-up / low SOC taper)
-20%–80%:  ~100% of max charger rate (optimal window)
-80%–90%:  ~50% of max charger rate (taper begins)
-90%–100%: ~20% of max charger rate (heavy taper)
+time_hours = (target_kwh - start_kwh) / effective_rate
 ```
 
-The effective charge rate is `min(chargerMaxKw, carMaxAcceptRateKw)` for each segment (car max accept rate is derived from battery size heuristic or can be user-overridden in the future).
+### DC Fast Charging
 
-**Time estimate formula**: For each segment the session passes through, calculate:
+DC charging bypasses the onboard charger and feeds the battery directly, so the
+battery's state of charge affects the rate. We approximate this with a
+**piecewise model**:
+
 ```
-time_hours = (segment_kwh) / (effective_rate * segment_efficiency)
+0%–20%:   ~85% of max rate (battery warm-up / low SOC ramp)
+20%–80%:  ~100% of max rate (optimal window)
+80%–90%:  ~50% of max rate (taper begins)
+90%–100%: ~20% of max rate (heavy taper)
 ```
-Sum all segments to get total estimated time. Recalculate whenever user overrides start/target percentages.
+
+The effective rate for each segment is `min(chargerMaxKw, carMaxAcceptRateKw)`,
+then multiplied by the segment's rate factor.
+
+**Time estimate formula**: For each segment the session passes through:
+```
+time_hours = segment_kwh / (effective_rate * segment_rate_factor)
+```
+Sum all segments to get total estimated time.
+
+### Common
+
+- `carMaxAcceptRateKw` is derived from battery size heuristic or can be
+  user-overridden in the future.
+- Recalculate whenever user overrides start/target percentages.
 
 ---
 
@@ -148,13 +184,17 @@ foreground service only when a charging session is active or likely.
    → Poll location every 1 min
    → Recalculate estimated end time
 5. End session when:
-   a. User left (>100m away) for >15 minutes AND re-enters the
-      location → endReason=USER_LEFT (a new session may then start
-      after the normal 3-min dwell detection)
+   a. User re-enters the geofence after being >100m away for
+      >15 minutes → endReason=USER_LEFT (assumes they returned
+      to unplug; a new session may start after the normal 3-min
+      dwell detection)
    b. Estimated charge target reached → endReason=TARGET_REACHED
    c. User manually ends → endReason=MANUAL
-   Note: brief departures (<15 min) do NOT end the session — the user
-   may have stepped away momentarily (e.g., to a nearby store).
+   Note: the user's phone may leave the area while the car stays
+   plugged in (e.g., walking to a nearby store). Brief departures
+   (<15 min) do NOT end the session. Longer absences are fine too —
+   the session continues until TARGET_REACHED, MANUAL end, or the
+   user re-enters (triggering USER_LEFT).
 6. On session end → stop foreground service, return to Tier 1
 ```
 
@@ -169,10 +209,9 @@ When estimated time remaining ≤ `notifyMinutesBefore` (default 15 min):
 
 ## External APIs
 
-### EV Database Lookup (battery capacity)
-- **Primary**: [OpenChargeMap API](https://openchargemap.org/site/develop/api) — free, no key required for basic use
-- **Fallback**: Ship a bundled JSON of ~50 popular EV models with battery capacities
-- Endpoint: query by make/model/year → extract battery capacity
+### EV Database (battery capacity)
+- Ship a bundled JSON/Kotlin map of popular EV models with battery capacities
+- User can always override manually when adding/editing a car
 
 ### Charger Location Info
 - **OpenChargeMap API**: also provides charger/station info by lat/lng
@@ -369,7 +408,7 @@ app/src/test/java/com/evchargedreminder/     # Unit tests (JVM, no device)
 
 ### Phase 2 — Car Management
 - Car add/edit/delete screens
-- Year/Make/Model picker (bundled data + API lookup)
+- Year/Make/Model picker (bundled data)
 - Favorite car logic
 - Battery capacity auto-fill
 - Tests: CarRepositoryTest, CarsViewModelTest
