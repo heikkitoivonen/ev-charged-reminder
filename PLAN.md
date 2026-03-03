@@ -18,6 +18,7 @@ A free, open-source (MIT) Android app that automatically detects when a user is 
 | Background work | WorkManager + ForegroundService |
 | Location | Google Play Services FusedLocationProvider |
 | Networking | Retrofit + Moshi (for EV database / charger API lookups) |
+| Maps | osmdroid (OSM tiles, no API key, free) |
 | Navigation | Compose Navigation (type-safe) |
 | Build | Gradle (Kotlin DSL), single-module to start |
 
@@ -108,30 +109,53 @@ Sum all segments to get total estimated time. Recalculate whenever user override
 
 ## Background Location Monitoring
 
-### Strategy
-Use a **foreground service** with a persistent notification ("EV Charged Reminder is monitoring your location") to ensure reliable location updates.
+### Strategy: Two-Tier Model
+Use a **non-intrusive background approach** for passive monitoring, upgrading to a
+foreground service only when a charging session is active or likely.
 
-### Adaptive Polling Frequency
-| Distance to nearest charger | Poll interval |
-|---|---|
-| > 10 km | 10 minutes |
-| 1–10 km | 5 minutes |
-| 100 m – 1 km | 2 minutes |
-| < 100 m (in range) | 1 minute |
+#### Tier 1 — Passive Monitoring (no foreground service)
+- Use **Geofencing API** to register geofences (100 m radius) around all saved charger locations.
+- When a geofence ENTER event fires, start a **short-lived WorkManager task** to confirm
+  proximity and begin the 3-minute dwell timer.
+- Additionally, use **periodic WorkManager** (every 15 min) as a heartbeat to re-register
+  geofences if needed (geofences can be lost on reboot / Play Services update).
+- No persistent notification — completely invisible to the user.
+
+#### Tier 2 — Active Session (foreground service)
+- When the user has been within a charger geofence for **≥ 3 minutes** (confirmed by
+  location checks), promote to a **foreground service** with a notification showing
+  charging status, progress, and ETA.
+- The foreground service polls location at **1-minute intervals** for accurate session
+  tracking and auto-end detection.
+- The foreground service stops (drops back to Tier 1) when the session ends.
+
+### Adaptive Polling (Tier 1 — within geofence, pre-session)
+| State | Poll interval | Method |
+|---|---|---|
+| Outside all geofences | No polling | Geofence API triggers on entry |
+| Entered geofence, dwell timer running | 1 minute | WorkManager / short alarm |
+| Session active (Tier 2) | 1 minute | Foreground service |
 
 ### Session Detection Logic
 ```
-1. Poll location
-2. If within 100m of a charger AND duration >= 3 minutes:
-   → Start a charging session (use favorite car)
-   → Show "Charging started" notification
-3. While session is active:
-   → Continue polling at 1-min interval
+1. Geofence ENTER event fires
+2. Start dwell timer — confirm location every 1 min
+3. If within 100m of charger for >= 3 consecutive minutes:
+   → Promote to foreground service
+   → Start charging session (use favorite car)
+   → Show "Charging started" notification with progress
+4. While session is active (foreground service):
+   → Poll location every 1 min
    → Recalculate estimated end time
-4. End session when:
-   a. User has been >100m away for >15 minutes → endReason=USER_LEFT
+5. End session when:
+   a. User left (>100m away) for >15 minutes AND re-enters the
+      location → endReason=USER_LEFT (a new session may then start
+      after the normal 3-min dwell detection)
    b. Estimated charge target reached → endReason=TARGET_REACHED
    c. User manually ends → endReason=MANUAL
+   Note: brief departures (<15 min) do NOT end the session — the user
+   may have stepped away momentarily (e.g., to a nearby store).
+6. On session end → stop foreground service, return to Tier 1
 ```
 
 ### Notification Schedule (near completion)
@@ -155,6 +179,16 @@ When estimated time remaining ≤ `notifyMinutesBefore` (default 15 min):
 - Query when user adds a charger to suggest max charging speed
 - User can always override
 
+### Reverse Geocoding (charger address label)
+- **Nominatim API** (OpenStreetMap): `https://nominatim.openstreetmap.org/reverse`
+- Free, no API key required
+- Must set `User-Agent: EVChargedReminder/1.0`, limit 1 req/sec
+- Used to auto-generate a human-readable name when adding a charger by GPS or map tap
+
+### Map Tiles
+- **osmdroid** with default OSM tile source (free, no API key)
+- Requires OpenStreetMap attribution displayed on map
+
 ---
 
 ## Screen Flow
@@ -170,8 +204,9 @@ When estimated time remaining ≤ `notifyMinutesBefore` (default 15 min):
 │       manual)                               │
 │     - EV vs Hybrid toggle                   │
 │     - Default start/target %                │
-│  3. Add your first charger                  │
-│     - "Add charger at current location"     │
+│  3. Add your first charger (optional, skip)  │
+│     - Option A: "Add at current location"   │
+│     - Option B: "Pick on map" (map view)    │
 │     - Select charger type preset            │
 │     - Override charging speed if needed     │
 │  4. Grant location permission               │
@@ -194,10 +229,11 @@ When estimated time remaining ≤ `notifyMinutesBefore` (default 15 min):
 │  CARS LIST   │  │ CHARGERS LIST│  │   HISTORY    │
 │              │  │              │  │              │
 │ + Add car    │  │ + Add charger│  │ Session list  │
-│ ★ Favorite   │  │ Edit/Delete  │  │ (up to 1 yr) │
-│ Edit/Delete  │  │ Per-charger  │  │ Filter by    │
-│ Per-car      │  │  settings    │  │  car/charger │
-│  settings    │  │              │  │              │
+│ ★ Favorite   │  │  (GPS or map)│  │ (up to 1 yr) │
+│ Edit/Delete  │  │ 🗺 Map view  │  │ Filter by    │
+│ Per-car      │  │ Edit/Delete  │  │  car/charger │
+│  settings    │  │ Per-charger  │  │              │
+│              │  │  settings    │  │              │
 └──────────────┘  └──────────────┘  └──────────────┘
 ```
 
@@ -281,42 +317,83 @@ app/src/main/java/com/evchargedreminder/
 └── util/
     ├── ChargingCurve.kt           # Piecewise charging model
     └── DistanceUtils.kt
+
+app/src/test/java/com/evchargedreminder/     # Unit tests (JVM, no device)
+├── domain/
+│   └── usecase/
+│       ├── EstimateChargingTimeUseCaseTest.kt
+│       ├── DetectChargingSessionUseCaseTest.kt
+│       └── ManageSessionUseCaseTest.kt
+├── data/
+│   ├── repository/
+│   │   ├── CarRepositoryTest.kt
+│   │   ├── ChargerRepositoryTest.kt
+│   │   └── ChargingSessionRepositoryTest.kt
+│   └── bundled/
+│       └── BundledEvDataTest.kt
+├── ui/
+│   ├── onboarding/
+│   │   └── OnboardingViewModelTest.kt
+│   ├── home/
+│   │   └── HomeViewModelTest.kt
+│   ├── cars/
+│   │   └── CarsViewModelTest.kt
+│   ├── chargers/
+│   │   └── ChargersViewModelTest.kt
+│   └── history/
+│       └── HistoryViewModelTest.kt
+└── util/
+    ├── ChargingCurveTest.kt
+    └── DistanceUtilsTest.kt
 ```
+
+### Testing Strategy
+- **Unit tests** (JVM, `src/test/`) for all pure logic: charging curve math,
+  distance calculations, use cases, repository logic (with fake DAOs),
+  and ViewModel state/logic (with fake repositories).
+- Network calls, location services, and notification APIs are behind
+  interfaces — tests use fakes/mocks, no real I/O.
+- **No instrumented tests** initially — add later if needed for Room DAOs
+  or Compose UI tests.
 
 ---
 
 ## Implementation Phases
 
 ### Phase 1 — Foundation
-- Project setup (Gradle, Hilt, Room, Compose)
+- Project setup (Gradle, Hilt, Room, Compose, test dependencies)
 - Data layer: entities, DAOs, database
 - Domain models and repository interfaces
 - Material 3 theme
+- Tests: BundledEvDataTest, DistanceUtilsTest
 
 ### Phase 2 — Car Management
 - Car add/edit/delete screens
 - Year/Make/Model picker (bundled data + API lookup)
 - Favorite car logic
 - Battery capacity auto-fill
+- Tests: CarRepositoryTest, CarsViewModelTest
 
 ### Phase 3 — Charger Management
-- Add charger at current GPS location
+- Add charger at current GPS location + map view
 - Charger type presets
 - OpenChargeMap API integration
 - Charger edit/delete screens
+- Tests: ChargerRepositoryTest, ChargersViewModelTest
 
 ### Phase 4 — Location Monitoring & Session Detection
-- Foreground service with persistent notification
+- Geofencing (Tier 1) + foreground service (Tier 2)
 - Adaptive polling logic
-- Geofence proximity detection
 - Session auto-start after 3 min in range
-- Session auto-end logic (left for 15 min / target reached)
+- Session auto-end logic
+- Tests: DetectChargingSessionUseCaseTest, ManageSessionUseCaseTest
 
 ### Phase 5 — Charging Estimation & Notifications
 - Piecewise charging curve calculator
 - Dynamic ETA updates
 - 3-notification schedule before completion
 - Notification tap → override charge percentages
+- Tests: ChargingCurveTest, EstimateChargingTimeUseCaseTest
 
 ### Phase 6 — History & Polish
 - Session history list with filtering
@@ -324,6 +401,8 @@ app/src/main/java/com/evchargedreminder/
 - Onboarding flow
 - Permission request flow
 - Edge cases and error handling
+- Tests: ChargingSessionRepositoryTest, HistoryViewModelTest,
+  OnboardingViewModelTest, HomeViewModelTest
 
 ---
 
