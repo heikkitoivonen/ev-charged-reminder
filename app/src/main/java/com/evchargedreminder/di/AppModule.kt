@@ -6,6 +6,8 @@ import com.evchargedreminder.data.repository.ChargerRepository
 import com.evchargedreminder.data.repository.ChargerRepositoryImpl
 import com.evchargedreminder.data.repository.ChargingSessionRepository
 import com.evchargedreminder.data.repository.ChargingSessionRepositoryImpl
+import com.evchargedreminder.util.FusedLocationProvider
+import com.evchargedreminder.util.LocationProvider
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -25,4 +27,7 @@ abstract class AppModule {
     abstract fun bindChargingSessionRepository(
         impl: ChargingSessionRepositoryImpl
     ): ChargingSessionRepository
+
+    @Binds
+    abstract fun bindLocationProvider(impl: FusedLocationProvider): LocationProvider
 }

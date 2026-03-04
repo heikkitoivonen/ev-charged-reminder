@@ -13,6 +13,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,12 +29,17 @@ import androidx.navigation.toRoute
 import com.evchargedreminder.R
 import com.evchargedreminder.ui.cars.CarEditScreen
 import com.evchargedreminder.ui.cars.CarListScreen
+import com.evchargedreminder.ui.chargers.ChargerEditScreen
+import com.evchargedreminder.ui.chargers.ChargerListScreen
+import com.evchargedreminder.ui.chargers.MapPickerScreen
 import kotlinx.serialization.Serializable
 
 @Serializable object HomeRoute
 @Serializable object CarListRoute
 @Serializable data class CarEditRoute(val carId: Long = -1L)
 @Serializable object ChargerListRoute
+@Serializable data class ChargerEditRoute(val chargerId: Long = -1L)
+@Serializable data class MapPickerRoute(val initialLat: Double = 0.0, val initialLng: Double = 0.0)
 @Serializable object HistoryRoute
 
 data class BottomNavItem(
@@ -106,9 +112,43 @@ fun AppNavHost() {
                 )
             }
             composable<ChargerListRoute> {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Chargers — coming soon")
-                }
+                ChargerListScreen(
+                    onAddCharger = { navController.navigate(ChargerEditRoute()) },
+                    onEditCharger = { chargerId -> navController.navigate(ChargerEditRoute(chargerId)) }
+                )
+            }
+            composable<ChargerEditRoute> { backStackEntry ->
+                // Listen for map picker result
+                val mapLat = backStackEntry.savedStateHandle
+                    .getStateFlow("map_lat", Double.NaN).collectAsState()
+                val mapLng = backStackEntry.savedStateHandle
+                    .getStateFlow("map_lng", Double.NaN).collectAsState()
+
+                ChargerEditScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                    onPickOnMap = { lat, lng ->
+                        navController.navigate(MapPickerRoute(lat, lng))
+                    },
+                    mapPickerLat = mapLat.value,
+                    mapPickerLng = mapLng.value,
+                    onMapResultConsumed = {
+                        backStackEntry.savedStateHandle["map_lat"] = Double.NaN
+                        backStackEntry.savedStateHandle["map_lng"] = Double.NaN
+                    }
+                )
+            }
+            composable<MapPickerRoute> { backStackEntry ->
+                val route = backStackEntry.toRoute<MapPickerRoute>()
+                MapPickerScreen(
+                    initialLat = route.initialLat,
+                    initialLng = route.initialLng,
+                    onLocationSelected = { lat, lng ->
+                        navController.previousBackStackEntry?.savedStateHandle?.set("map_lat", lat)
+                        navController.previousBackStackEntry?.savedStateHandle?.set("map_lng", lng)
+                        navController.popBackStack()
+                    },
+                    onNavigateBack = { navController.popBackStack() }
+                )
             }
             composable<HistoryRoute> {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

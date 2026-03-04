@@ -77,6 +77,18 @@ dependencies {
     implementation("com.google.dagger:hilt-android:2.53.1")
     ksp("com.google.dagger:hilt-android-compiler:2.53.1")
 
+    // Networking (Retrofit + Moshi)
+    implementation("com.squareup.retrofit2:retrofit:2.11.0")
+    implementation("com.squareup.retrofit2:converter-moshi:2.11.0")
+    implementation("com.squareup.moshi:moshi-kotlin:1.15.1")
+    ksp("com.squareup.moshi:moshi-kotlin-codegen:1.15.1")
+
+    // osmdroid map
+    implementation("org.osmdroid:osmdroid-android:6.1.18")
+
+    // Location services
+    implementation("com.google.android.gms:play-services-location:21.3.0")
+
     // Desugaring (for java.time on API < 26)
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 
