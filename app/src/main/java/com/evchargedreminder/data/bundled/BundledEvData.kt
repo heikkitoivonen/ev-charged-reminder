@@ -56,4 +56,10 @@ object BundledEvData {
             .map { it.model }
             .distinct()
             .sorted()
+
+    fun getTrimsForMakeAndModel(make: String, model: String): List<String> =
+        findByMakeAndModel(make, model)
+            .mapNotNull { it.trim }
+            .distinct()
+            .sorted()
 }

@@ -3,7 +3,7 @@ package com.evchargedreminder
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.material3.Text
+import com.evchargedreminder.ui.navigation.AppNavHost
 import com.evchargedreminder.ui.theme.EVChargedReminderTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -13,7 +13,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             EVChargedReminderTheme {
-                Text("EV Charged Reminder")
+                AppNavHost()
             }
         }
     }
