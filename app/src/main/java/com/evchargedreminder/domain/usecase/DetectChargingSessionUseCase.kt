@@ -76,7 +76,9 @@ class DetectChargingSessionUseCase @Inject constructor(
             batteryCapacityKwh = car.batteryCapacityKwh,
             startPct = car.defaultStartPct,
             targetPct = car.defaultTargetPct,
-            chargingSpeedKw = charger.maxChargingSpeedKw
+            chargingSpeedKw = charger.maxChargingSpeedKw,
+            isAc = charger.chargerType.isAc,
+            maxAcceptRateKw = car.maxAcceptRateKw
         )
 
         val now = Instant.now()

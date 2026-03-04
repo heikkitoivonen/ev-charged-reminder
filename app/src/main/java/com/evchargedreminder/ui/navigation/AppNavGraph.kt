@@ -32,6 +32,7 @@ import com.evchargedreminder.ui.cars.CarListScreen
 import com.evchargedreminder.ui.chargers.ChargerEditScreen
 import com.evchargedreminder.ui.chargers.ChargerListScreen
 import com.evchargedreminder.ui.chargers.MapPickerScreen
+import com.evchargedreminder.ui.home.HomeScreen
 import kotlinx.serialization.Serializable
 
 @Serializable object HomeRoute
@@ -49,7 +50,7 @@ data class BottomNavItem(
 )
 
 @Composable
-fun AppNavHost() {
+fun AppNavHost(showOverride: Boolean = false) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
@@ -95,9 +96,7 @@ fun AppNavHost() {
             modifier = Modifier.padding(innerPadding)
         ) {
             composable<HomeRoute> {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Not charging")
-                }
+                HomeScreen(showOverride = showOverride)
             }
             composable<CarListRoute> {
                 CarListScreen(

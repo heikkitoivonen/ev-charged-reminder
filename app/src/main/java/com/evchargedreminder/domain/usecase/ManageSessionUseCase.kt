@@ -1,9 +1,11 @@
 package com.evchargedreminder.domain.usecase
 
+import com.evchargedreminder.data.repository.CarRepository
 import com.evchargedreminder.data.repository.ChargerRepository
 import com.evchargedreminder.data.repository.ChargingSessionRepository
 import com.evchargedreminder.domain.model.ChargingSession
 import com.evchargedreminder.domain.model.SessionEndReason
+import com.evchargedreminder.util.ChargingCurve
 import java.time.Duration
 import java.time.Instant
 import javax.inject.Inject
@@ -12,7 +14,8 @@ import javax.inject.Singleton
 @Singleton
 class ManageSessionUseCase @Inject constructor(
     private val chargingSessionRepository: ChargingSessionRepository,
-    private val chargerRepository: ChargerRepository
+    private val chargerRepository: ChargerRepository,
+    private val carRepository: CarRepository
 ) {
 
     /**
@@ -99,5 +102,40 @@ class ManageSessionUseCase @Inject constructor(
     fun getEstimatedMinutesRemaining(session: ChargingSession): Long {
         val remaining = Duration.between(Instant.now(), session.estimatedEndAt)
         return remaining.toMinutes().coerceAtLeast(0)
+    }
+
+    /**
+     * Recalculates the estimated end time for an active session.
+     * Optionally updates start/target percentages if overridden by the user.
+     * The new estimatedEndAt is computed from startedAt + full charge duration.
+     */
+    suspend fun updateEstimatedEndTime(
+        sessionId: Long,
+        newStartPct: Int? = null,
+        newTargetPct: Int? = null
+    ) {
+        val session = chargingSessionRepository.getById(sessionId) ?: return
+        val car = carRepository.getById(session.carId) ?: return
+        val charger = chargerRepository.getById(session.chargerId) ?: return
+
+        val startPct = newStartPct ?: session.startPct
+        val targetPct = newTargetPct ?: session.targetPct
+
+        val totalMinutes = ChargingCurve.estimateChargingTimeMinutes(
+            batteryCapacityKwh = car.batteryCapacityKwh,
+            startPct = startPct,
+            targetPct = targetPct,
+            chargingSpeedKw = charger.maxChargingSpeedKw,
+            isAc = charger.chargerType.isAc,
+            maxAcceptRateKw = car.maxAcceptRateKw
+        )
+
+        chargingSessionRepository.update(
+            session.copy(
+                startPct = startPct,
+                targetPct = targetPct,
+                estimatedEndAt = session.startedAt.plusSeconds(totalMinutes * 60)
+            )
+        )
     }
 }

@@ -1,7 +1,9 @@
 package com.evchargedreminder.domain.usecase
 
+import com.evchargedreminder.data.repository.CarRepository
 import com.evchargedreminder.data.repository.ChargerRepository
 import com.evchargedreminder.data.repository.ChargingSessionRepository
+import com.evchargedreminder.domain.model.Car
 import com.evchargedreminder.domain.model.Charger
 import com.evchargedreminder.domain.model.ChargerType
 import com.evchargedreminder.domain.model.ChargingSession
@@ -22,13 +24,15 @@ class ManageSessionUseCaseTest {
 
     private lateinit var fakeSessionRepo: FakeSessionRepo
     private lateinit var fakeChargerRepo: FakeChargerRepo
+    private lateinit var fakeCarRepo: FakeCarRepo
     private lateinit var useCase: ManageSessionUseCase
 
     @Before
     fun setup() {
         fakeSessionRepo = FakeSessionRepo()
         fakeChargerRepo = FakeChargerRepo()
-        useCase = ManageSessionUseCase(fakeSessionRepo, fakeChargerRepo)
+        fakeCarRepo = FakeCarRepo()
+        useCase = ManageSessionUseCase(fakeSessionRepo, fakeChargerRepo, fakeCarRepo)
     }
 
     @Test
@@ -112,6 +116,33 @@ class ManageSessionUseCaseTest {
         assertEquals(1, fakeSessionRepo.getById(id)!!.notificationsSent)
     }
 
+    @Test
+    fun `updateEstimatedEndTime recalculates with new percentages`() = runTest {
+        val carId = fakeCarRepo.insert(
+            Car(year = 2024, make = "Tesla", model = "Model 3",
+                batteryCapacityKwh = 75.0, isFavorite = true, createdAt = Instant.now())
+        )
+        val chargerId = fakeChargerRepo.insert(testCharger())
+        val startedAt = Instant.now().minusSeconds(600) // started 10 min ago
+        val sessionId = fakeSessionRepo.insert(
+            ChargingSession(
+                carId = carId, chargerId = chargerId,
+                startPct = 20, targetPct = 80,
+                startedAt = startedAt,
+                estimatedEndAt = startedAt.plusSeconds(3600)
+            )
+        )
+
+        // Override target to 90%
+        useCase.updateEstimatedEndTime(sessionId, newTargetPct = 90)
+
+        val updated = fakeSessionRepo.getById(sessionId)!!
+        assertEquals(90, updated.targetPct)
+        assertEquals(20, updated.startPct) // unchanged
+        // New estimatedEndAt should be startedAt + recalculated total time
+        assertTrue(updated.estimatedEndAt.isAfter(startedAt))
+    }
+
     private fun testSession() = ChargingSession(
         carId = 1,
         chargerId = 1,
@@ -160,6 +191,35 @@ private class FakeSessionRepo : ChargingSessionRepository {
     override suspend fun deleteOlderThan(cutoffEpochMilli: Long) {
         sessions.removeAll { it.actualEndAt != null && it.startedAt.toEpochMilli() < cutoffEpochMilli }
         flow.value = sessions.toList()
+    }
+}
+
+private class FakeCarRepo : CarRepository {
+    private var nextId = 1L
+    private val cars = mutableListOf<Car>()
+    private val flow = MutableStateFlow<List<Car>>(emptyList())
+
+    override fun getAll(): Flow<List<Car>> = flow.map { it.toList() }
+    override suspend fun getById(id: Long): Car? = cars.find { it.id == id }
+    override suspend fun getFavorite(): Car? = cars.find { it.isFavorite }
+    override suspend fun count(): Int = cars.size
+    override suspend fun insert(car: Car): Long {
+        val c = car.copy(id = nextId++)
+        cars.add(c)
+        flow.value = cars.toList()
+        return c.id
+    }
+    override suspend fun update(car: Car) {
+        val i = cars.indexOfFirst { it.id == car.id }
+        if (i >= 0) { cars[i] = car; flow.value = cars.toList() }
+    }
+    override suspend fun delete(car: Car) {
+        cars.removeAll { it.id == car.id }
+        flow.value = cars.toList()
+    }
+    override suspend fun setFavorite(carId: Long) {
+        cars.forEachIndexed { i, car -> cars[i] = car.copy(isFavorite = car.id == carId) }
+        flow.value = cars.toList()
     }
 }
 

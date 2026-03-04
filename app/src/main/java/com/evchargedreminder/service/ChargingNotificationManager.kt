@@ -24,6 +24,7 @@ class ChargingNotificationManager @Inject constructor(
         const val FOREGROUND_NOTIFICATION_ID = 1001
         const val ALERT_NOTIFICATION_ID = 1002
         const val SESSION_ENDED_NOTIFICATION_ID = 1003
+        const val EXTRA_SHOW_OVERRIDE = "show_override"
     }
 
     fun createNotificationChannels() {
@@ -88,6 +89,10 @@ class ChargingNotificationManager @Inject constructor(
     }
 
     fun sendChargingAlertNotification(minutesRemaining: Long) {
+        val overrideIntent = Intent(context, MainActivity::class.java).apply {
+            putExtra(EXTRA_SHOW_OVERRIDE, true)
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
         val notification = NotificationCompat.Builder(context, CHANNEL_ALERTS)
             .setSmallIcon(android.R.drawable.ic_lock_idle_charging)
             .setContentTitle("Charging almost done")
@@ -96,9 +101,9 @@ class ChargingNotificationManager @Inject constructor(
             .setAutoCancel(true)
             .setContentIntent(
                 PendingIntent.getActivity(
-                    context, 0,
-                    Intent(context, MainActivity::class.java),
-                    PendingIntent.FLAG_IMMUTABLE
+                    context, 1,
+                    overrideIntent,
+                    PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
                 )
             )
             .build()

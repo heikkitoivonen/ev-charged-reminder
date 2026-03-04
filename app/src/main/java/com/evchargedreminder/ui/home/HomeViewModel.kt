@@ -1,0 +1,169 @@
+package com.evchargedreminder.ui.home
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.evchargedreminder.data.repository.CarRepository
+import com.evchargedreminder.data.repository.ChargerRepository
+import com.evchargedreminder.data.repository.ChargingSessionRepository
+import com.evchargedreminder.domain.model.Car
+import com.evchargedreminder.domain.model.Charger
+import com.evchargedreminder.domain.model.ChargingSession
+import com.evchargedreminder.domain.model.SessionEndReason
+import com.evchargedreminder.domain.usecase.EstimateChargingTimeUseCase
+import com.evchargedreminder.domain.usecase.ManageSessionUseCase
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+
+data class HomeUiState(
+    val isLoading: Boolean = true,
+    val activeSession: ChargingSession? = null,
+    val car: Car? = null,
+    val charger: Charger? = null,
+    val estimatedMinutesRemaining: Long = 0,
+    val progressPercent: Float = 0f,
+    val isEditing: Boolean = false,
+    val editStartPct: Int = 20,
+    val editTargetPct: Int = 80,
+    val showOverrideControls: Boolean = false
+)
+
+@HiltViewModel
+class HomeViewModel @Inject constructor(
+    private val manageSession: ManageSessionUseCase,
+    private val carRepository: CarRepository,
+    private val chargerRepository: ChargerRepository,
+    private val chargingSessionRepository: ChargingSessionRepository,
+    private val estimateUseCase: EstimateChargingTimeUseCase
+) : ViewModel() {
+
+    private val _uiState = MutableStateFlow(HomeUiState())
+    val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+
+    private var refreshJob: Job? = null
+
+    companion object {
+        private const val REFRESH_INTERVAL_MS = 30_000L // 30 seconds
+    }
+
+    init {
+        startRefreshing()
+    }
+
+    private fun startRefreshing() {
+        refreshJob?.cancel()
+        refreshJob = viewModelScope.launch {
+            while (true) {
+                refreshSession()
+                delay(REFRESH_INTERVAL_MS)
+            }
+        }
+    }
+
+    private suspend fun refreshSession() {
+        val session = manageSession.getActiveSession()
+        if (session == null) {
+            _uiState.update {
+                it.copy(
+                    isLoading = false,
+                    activeSession = null,
+                    car = null,
+                    charger = null,
+                    estimatedMinutesRemaining = 0,
+                    progressPercent = 0f
+                )
+            }
+            return
+        }
+
+        val car = carRepository.getById(session.carId)
+        val charger = chargerRepository.getById(session.chargerId)
+        val minutesRemaining = manageSession.getEstimatedMinutesRemaining(session)
+        val progress = calculateProgress(session, minutesRemaining, car)
+
+        _uiState.update {
+            it.copy(
+                isLoading = false,
+                activeSession = session,
+                car = car,
+                charger = charger,
+                estimatedMinutesRemaining = minutesRemaining,
+                progressPercent = progress
+            )
+        }
+    }
+
+    private fun calculateProgress(
+        session: ChargingSession,
+        minutesRemaining: Long,
+        car: Car?
+    ): Float {
+        if (car == null) return 0f
+        val totalMinutes = estimateUseCase.estimateWithData(
+            car,
+            // Use a minimal charger object just for calculation — we just need the session data
+            _uiState.value.charger ?: return 0f,
+            session.startPct,
+            session.targetPct
+        )
+        if (totalMinutes <= 0) return 1f
+        val elapsed = totalMinutes - minutesRemaining
+        return (elapsed.toFloat() / totalMinutes).coerceIn(0f, 1f)
+    }
+
+    fun showOverrideControls(show: Boolean) {
+        val session = _uiState.value.activeSession ?: return
+        _uiState.update {
+            it.copy(
+                showOverrideControls = show,
+                isEditing = show,
+                editStartPct = session.startPct,
+                editTargetPct = session.targetPct
+            )
+        }
+    }
+
+    fun updateEditStartPct(pct: Int) {
+        _uiState.update { it.copy(editStartPct = pct) }
+    }
+
+    fun updateEditTargetPct(pct: Int) {
+        _uiState.update { it.copy(editTargetPct = pct) }
+    }
+
+    fun applyOverride() {
+        val session = _uiState.value.activeSession ?: return
+        viewModelScope.launch {
+            manageSession.updateEstimatedEndTime(
+                sessionId = session.id,
+                newStartPct = _uiState.value.editStartPct,
+                newTargetPct = _uiState.value.editTargetPct
+            )
+            _uiState.update { it.copy(isEditing = false, showOverrideControls = false) }
+            refreshSession()
+        }
+    }
+
+    fun cancelEditing() {
+        _uiState.update { it.copy(isEditing = false, showOverrideControls = false) }
+    }
+
+    fun endSession() {
+        val session = _uiState.value.activeSession ?: return
+        viewModelScope.launch {
+            manageSession.endSession(session.id, SessionEndReason.MANUAL)
+            refreshSession()
+        }
+    }
+
+    override fun onCleared() {
+        refreshJob?.cancel()
+        super.onCleared()
+    }
+}

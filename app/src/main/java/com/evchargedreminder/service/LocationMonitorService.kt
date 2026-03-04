@@ -26,7 +26,10 @@ class LocationMonitorService : Service() {
     companion object {
         const val ACTION_START_SESSION = "com.evchargedreminder.START_SESSION"
         const val ACTION_END_SESSION = "com.evchargedreminder.END_SESSION"
+        const val ACTION_UPDATE_PERCENTAGES = "com.evchargedreminder.UPDATE_PERCENTAGES"
         const val EXTRA_SESSION_ID = "session_id"
+        const val EXTRA_START_PCT = "start_pct"
+        const val EXTRA_TARGET_PCT = "target_pct"
         private const val POLL_INTERVAL_MS = 60_000L // 1 minute
     }
 
@@ -59,6 +62,30 @@ class LocationMonitorService : Service() {
                         notificationManager.sendSessionEndedNotification(SessionEndReason.MANUAL)
                     }
                     stopSelf()
+                }
+            }
+            ACTION_UPDATE_PERCENTAGES -> {
+                val sessionId = intent.getLongExtra(EXTRA_SESSION_ID, -1L)
+                val startPct = intent.getIntExtra(EXTRA_START_PCT, -1)
+                val targetPct = intent.getIntExtra(EXTRA_TARGET_PCT, -1)
+                if (sessionId != -1L) {
+                    serviceScope.launch {
+                        manageSession.updateEstimatedEndTime(
+                            sessionId = sessionId,
+                            newStartPct = if (startPct >= 0) startPct else null,
+                            newTargetPct = if (targetPct >= 0) targetPct else null
+                        )
+                        // Refresh foreground notification with updated ETA
+                        val session = chargingSessionRepository.getById(sessionId) ?: return@launch
+                        val charger = chargerRepository.getById(session.chargerId) ?: return@launch
+                        val minutesLeft = manageSession.getEstimatedMinutesRemaining(session)
+                        val notification = notificationManager.buildForegroundNotification(
+                            chargerName = charger.name,
+                            estimatedMinutesLeft = minutesLeft
+                        )
+                        val nm = getSystemService(android.app.NotificationManager::class.java)
+                        nm.notify(ChargingNotificationManager.FOREGROUND_NOTIFICATION_ID, notification)
+                    }
                 }
             }
         }
