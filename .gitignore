@@ -40,3 +40,6 @@ google-services.json
 
 # Eclipse
 /.project
+
+# Claude Code
+.claude/
