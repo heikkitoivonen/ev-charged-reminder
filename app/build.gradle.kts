@@ -89,6 +89,11 @@ dependencies {
     // Location services
     implementation("com.google.android.gms:play-services-location:21.3.0")
 
+    // WorkManager
+    implementation("androidx.work:work-runtime-ktx:2.9.1")
+    implementation("androidx.hilt:hilt-work:1.2.0")
+    ksp("androidx.hilt:hilt-compiler:1.2.0")
+
     // Desugaring (for java.time on API < 26)
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 
