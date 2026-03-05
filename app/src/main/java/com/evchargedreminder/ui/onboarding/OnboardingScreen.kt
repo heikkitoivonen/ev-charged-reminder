@@ -96,7 +96,10 @@ fun OnboardingScreen(
                     onAddCharger = onAddCharger,
                     onSkip = { viewModel.skipCharger() }
                 )
-                OnboardingStep.DONE -> DoneStep(onComplete = onComplete)
+                OnboardingStep.DONE -> DoneStep(onComplete = {
+                    viewModel.completeOnboarding()
+                    onComplete()
+                })
             }
 
             Spacer(Modifier.height(32.dp))
@@ -387,7 +390,7 @@ private fun PermissionsStep(state: OnboardingUiState, viewModel: OnboardingViewM
     Spacer(Modifier.height(16.dp))
 
     Button(
-        onClick = { viewModel.completeOnboarding() },
+        onClick = { viewModel.nextStep() },
         modifier = Modifier.fillMaxWidth()
     ) {
         Text("Continue")
@@ -395,7 +398,7 @@ private fun PermissionsStep(state: OnboardingUiState, viewModel: OnboardingViewM
 
     if (!state.locationGranted) {
         OutlinedButton(
-            onClick = { viewModel.completeOnboarding() },
+            onClick = { viewModel.nextStep() },
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Skip Permissions")

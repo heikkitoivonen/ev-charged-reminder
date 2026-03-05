@@ -188,6 +188,7 @@ class OnboardingViewModel @Inject constructor(
     }
 
     fun skipCharger() {
+        onboardingPreferences.isCompleted = true
         _uiState.update { it.copy(step = OnboardingStep.DONE) }
     }
 

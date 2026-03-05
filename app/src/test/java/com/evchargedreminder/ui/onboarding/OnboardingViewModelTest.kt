@@ -111,12 +111,13 @@ class OnboardingViewModelTest {
     }
 
     @Test
-    fun `skipCharger advances to DONE`() {
+    fun `skipCharger advances to DONE and marks completed`() {
         viewModel.nextStep() // -> ADD_CAR
         viewModel.nextStep() // -> PERMISSIONS
         viewModel.nextStep() // -> ADD_CHARGER
         viewModel.skipCharger()
         assertEquals(OnboardingStep.DONE, viewModel.uiState.value.step)
+        assertTrue(fakePrefs.isCompleted)
     }
 
     @Test
