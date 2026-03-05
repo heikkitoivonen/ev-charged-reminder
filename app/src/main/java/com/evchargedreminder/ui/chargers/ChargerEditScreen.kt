@@ -205,14 +205,28 @@ fun ChargerEditScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            // Radius
-            Text("Geofence Radius: ${state.radiusMeters}m")
-            Slider(
-                value = state.radiusMeters.toFloat(),
-                onValueChange = { viewModel.updateRadius(it.toInt()) },
-                valueRange = 25f..500f,
-                steps = 18
-            )
+            // Radius — display in locale-appropriate units
+            val useImperial = remember {
+                java.util.Locale.getDefault().country in setOf("US", "LR", "MM")
+            }
+            if (useImperial) {
+                val feet = (state.radiusMeters * 3.28084).toInt()
+                Text("Geofence Radius: ${feet}ft")
+                Slider(
+                    value = state.radiusMeters.toFloat(),
+                    onValueChange = { viewModel.updateRadius(it.toInt()) },
+                    valueRange = 25f..500f,
+                    steps = 18
+                )
+            } else {
+                Text("Geofence Radius: ${state.radiusMeters}m")
+                Slider(
+                    value = state.radiusMeters.toFloat(),
+                    onValueChange = { viewModel.updateRadius(it.toInt()) },
+                    valueRange = 25f..500f,
+                    steps = 18
+                )
+            }
 
             // Notify minutes before
             Text("Notify Before: ${state.notifyMinutesBefore} min")
