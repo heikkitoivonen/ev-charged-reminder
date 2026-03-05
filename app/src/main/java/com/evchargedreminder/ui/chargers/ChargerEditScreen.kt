@@ -108,39 +108,83 @@ fun ChargerEditScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                OutlinedButton(
-                    onClick = { viewModel.useCurrentLocation() },
-                    enabled = !state.isLoadingLocation,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    if (state.isLoadingLocation) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.padding(end = 8.dp),
-                            strokeWidth = 2.dp
-                        )
-                    } else {
+                val isCurrentSource = state.locationSource == LocationSource.CURRENT_LOCATION
+                val isMapSource = state.locationSource == LocationSource.MAP
+
+                if (isCurrentSource) {
+                    Button(
+                        onClick = { viewModel.useCurrentLocation() },
+                        enabled = !state.isLoadingLocation,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        if (state.isLoadingLocation) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.padding(end = 8.dp),
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Icon(
+                                Icons.Default.LocationOn,
+                                contentDescription = null,
+                                modifier = Modifier.padding(end = 4.dp)
+                            )
+                        }
+                        Text("Current Location")
+                    }
+                } else {
+                    OutlinedButton(
+                        onClick = { viewModel.useCurrentLocation() },
+                        enabled = !state.isLoadingLocation,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        if (state.isLoadingLocation) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.padding(end = 8.dp),
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Icon(
+                                Icons.Default.LocationOn,
+                                contentDescription = null,
+                                modifier = Modifier.padding(end = 4.dp)
+                            )
+                        }
+                        Text("Current Location")
+                    }
+                }
+
+                if (isMapSource) {
+                    Button(
+                        onClick = {
+                            val lat = state.latitude.toDoubleOrNull() ?: 0.0
+                            val lng = state.longitude.toDoubleOrNull() ?: 0.0
+                            onPickOnMap(lat, lng)
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
                         Icon(
-                            Icons.Default.LocationOn,
+                            Icons.Default.Place,
                             contentDescription = null,
                             modifier = Modifier.padding(end = 4.dp)
                         )
+                        Text("Pick on Map")
                     }
-                    Text("Current Location")
-                }
-                OutlinedButton(
-                    onClick = {
-                        val lat = state.latitude.toDoubleOrNull() ?: 0.0
-                        val lng = state.longitude.toDoubleOrNull() ?: 0.0
-                        onPickOnMap(lat, lng)
-                    },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Icon(
-                        Icons.Default.Place,
-                        contentDescription = null,
-                        modifier = Modifier.padding(end = 4.dp)
-                    )
-                    Text("Pick on Map")
+                } else {
+                    OutlinedButton(
+                        onClick = {
+                            val lat = state.latitude.toDoubleOrNull() ?: 0.0
+                            val lng = state.longitude.toDoubleOrNull() ?: 0.0
+                            onPickOnMap(lat, lng)
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(
+                            Icons.Default.Place,
+                            contentDescription = null,
+                            modifier = Modifier.padding(end = 4.dp)
+                        )
+                        Text("Pick on Map")
+                    }
                 }
             }
 

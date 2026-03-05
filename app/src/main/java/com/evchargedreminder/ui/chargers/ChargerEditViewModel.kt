@@ -19,6 +19,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+enum class LocationSource { NONE, CURRENT_LOCATION, MAP }
+
 data class ChargerEditUiState(
     val isEditMode: Boolean = false,
     val existingChargerId: Long? = null,
@@ -26,6 +28,7 @@ data class ChargerEditUiState(
     val latitude: String = "",
     val longitude: String = "",
     val hasLocation: Boolean = false,
+    val locationSource: LocationSource = LocationSource.NONE,
     val chargerType: ChargerType = ChargerType.STANDARD_HOUSEHOLD_OUTLET,
     val customPowerKw: String = "",
     val maxChargingSpeedKw: String = ChargerType.STANDARD_HOUSEHOLD_OUTLET.powerKw.toString(),
@@ -57,6 +60,8 @@ class ChargerEditViewModel @Inject constructor(
     init {
         if (editChargerId != null) {
             loadExistingCharger(editChargerId)
+        } else {
+            useCurrentLocation()
         }
     }
 
@@ -102,6 +107,7 @@ class ChargerEditViewModel @Inject constructor(
                     latitude = lat.toString(),
                     longitude = lng.toString(),
                     hasLocation = true,
+                    locationSource = LocationSource.CURRENT_LOCATION,
                     isLoadingLocation = false
                 )
             }
@@ -114,7 +120,8 @@ class ChargerEditViewModel @Inject constructor(
             it.copy(
                 latitude = lat.toString(),
                 longitude = lng.toString(),
-                hasLocation = true
+                hasLocation = true,
+                locationSource = LocationSource.MAP
             )
         }
         viewModelScope.launch {
