@@ -42,6 +42,7 @@ class HomeViewModelTest {
     private lateinit var estimateUseCase: EstimateChargingTimeUseCase
     private lateinit var fakeLocationProvider: FakeLocationProvider
     private lateinit var detectUseCase: DetectChargingSessionUseCase
+    private lateinit var nearbyTracker: NearbyChargerTracker
 
     @Before
     fun setup() {
@@ -50,6 +51,7 @@ class HomeViewModelTest {
         fakeChargerRepo = FakeHomeChargerRepo()
         fakeSessionRepo = FakeHomeSessionRepo()
         fakeLocationProvider = FakeLocationProvider()
+        nearbyTracker = NearbyChargerTracker()
         manageSession = ManageSessionUseCase(fakeSessionRepo, fakeChargerRepo, fakeCarRepo)
         estimateUseCase = EstimateChargingTimeUseCase(fakeCarRepo, fakeChargerRepo)
         detectUseCase = DetectChargingSessionUseCase(
@@ -65,7 +67,7 @@ class HomeViewModelTest {
     private fun createViewModel(): HomeViewModel {
         return HomeViewModel(
             manageSession, fakeCarRepo, fakeChargerRepo, fakeSessionRepo, estimateUseCase,
-            detectUseCase
+            detectUseCase, nearbyTracker
         )
     }
 

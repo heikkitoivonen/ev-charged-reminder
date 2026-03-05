@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.Duration
 import javax.inject.Inject
 
 data class HomeUiState(
@@ -49,14 +50,15 @@ class HomeViewModel @Inject constructor(
     private val chargerRepository: ChargerRepository,
     private val chargingSessionRepository: ChargingSessionRepository,
     private val estimateUseCase: EstimateChargingTimeUseCase,
-    private val detectUseCase: DetectChargingSessionUseCase
+    private val detectUseCase: DetectChargingSessionUseCase,
+    private val nearbyTracker: NearbyChargerTracker
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
     private var refreshJob: Job? = null
-    private val nearbyFirstSeen = mutableMapOf<Long, Instant>()
+    private var countdownJob: Job? = null
 
     companion object {
         private const val REFRESH_INTERVAL_MS = 30_000L // 30 seconds
@@ -65,6 +67,7 @@ class HomeViewModel @Inject constructor(
 
     init {
         startRefreshing()
+        startCountdownTicker()
     }
 
     private fun startRefreshing() {
@@ -77,17 +80,40 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    private fun startCountdownTicker() {
+        countdownJob?.cancel()
+        countdownJob = viewModelScope.launch {
+            while (true) {
+                delay(1_000L)
+                updateCountdown()
+            }
+        }
+    }
+
+    private fun updateCountdown() {
+        val state = _uiState.value
+        if (state.activeSession != null || state.nearbyChargers.isEmpty()) return
+
+        val target = state.nearbyChargers.firstOrNull { it.charger.id !in state.suppressedChargerIds }
+            ?: return
+        val firstSeen = nearbyTracker.getFirstSeen(target.charger.id) ?: return
+        val elapsed = Duration.between(firstSeen, Instant.now()).seconds
+        val countdown = (AUTO_START_DWELL_SECONDS - elapsed).coerceAtLeast(0)
+
+        _uiState.update {
+            it.copy(
+                autoStartChargerId = target.charger.id,
+                autoStartCountdownSeconds = countdown
+            )
+        }
+    }
+
     private suspend fun refreshSession() {
         val session = manageSession.getActiveSession()
         val nearby = try { detectUseCase.checkAllNearby() } catch (_: Exception) { emptyList() }
 
-        // Track first-seen times for nearby chargers
-        val now = Instant.now()
-        val currentNearbyIds = nearby.map { it.charger.id }.toSet()
-        nearbyFirstSeen.keys.retainAll(currentNearbyIds)
-        for (nc in nearby) {
-            nearbyFirstSeen.putIfAbsent(nc.charger.id, now)
-        }
+        // Track first-seen times via singleton (survives ViewModel recreation)
+        nearbyTracker.update(nearby.map { it.charger.id }.toSet())
 
         // Compute auto-start countdown for closest unsuppressed charger (only when no active session)
         val suppressedIds = _uiState.value.suppressedChargerIds
@@ -96,8 +122,8 @@ class HomeViewModel @Inject constructor(
         } else null
         val autoStartChargerId = autoStartTarget?.charger?.id
         val autoStartCountdown = if (autoStartTarget != null) {
-            val firstSeen = nearbyFirstSeen[autoStartTarget.charger.id] ?: now
-            val elapsed = java.time.Duration.between(firstSeen, now).seconds
+            val firstSeen = nearbyTracker.getFirstSeen(autoStartTarget.charger.id) ?: Instant.now()
+            val elapsed = Duration.between(firstSeen, Instant.now()).seconds
             (AUTO_START_DWELL_SECONDS - elapsed).coerceAtLeast(0)
         } else 0L
 
@@ -224,9 +250,10 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    /** Visible for testing — cancels the periodic refresh loop. */
+    /** Visible for testing — cancels the periodic refresh and countdown loops. */
     fun stopRefreshing() {
         refreshJob?.cancel()
+        countdownJob?.cancel()
     }
 
     override fun onCleared() {
