@@ -79,13 +79,13 @@ fun OnboardingScreen(
             when (state.step) {
                 OnboardingStep.WELCOME -> WelcomeStep(onNext = { viewModel.nextStep() })
                 OnboardingStep.ADD_CAR -> AddCarStep(state = state, viewModel = viewModel)
-                OnboardingStep.ADD_CHARGER -> AddChargerStep(
-                    onAddCharger = onAddCharger,
-                    onSkip = { viewModel.skipCharger() }
-                )
                 OnboardingStep.PERMISSIONS -> PermissionsStep(
                     state = state,
                     viewModel = viewModel
+                )
+                OnboardingStep.ADD_CHARGER -> AddChargerStep(
+                    onAddCharger = onAddCharger,
+                    onSkip = { viewModel.skipCharger() }
                 )
                 OnboardingStep.DONE -> DoneStep(onComplete = onComplete)
             }

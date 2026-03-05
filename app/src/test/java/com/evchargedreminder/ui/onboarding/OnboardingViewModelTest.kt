@@ -55,19 +55,19 @@ class OnboardingViewModelTest {
     fun `nextStep advances through all steps`() {
         viewModel.nextStep() // WELCOME -> ADD_CAR
         assertEquals(OnboardingStep.ADD_CAR, viewModel.uiState.value.step)
-        viewModel.nextStep() // ADD_CAR -> ADD_CHARGER
-        assertEquals(OnboardingStep.ADD_CHARGER, viewModel.uiState.value.step)
-        viewModel.nextStep() // ADD_CHARGER -> PERMISSIONS
+        viewModel.nextStep() // ADD_CAR -> PERMISSIONS
         assertEquals(OnboardingStep.PERMISSIONS, viewModel.uiState.value.step)
-        viewModel.nextStep() // PERMISSIONS -> DONE
+        viewModel.nextStep() // PERMISSIONS -> ADD_CHARGER
+        assertEquals(OnboardingStep.ADD_CHARGER, viewModel.uiState.value.step)
+        viewModel.nextStep() // ADD_CHARGER -> DONE
         assertEquals(OnboardingStep.DONE, viewModel.uiState.value.step)
     }
 
     @Test
     fun `previousStep goes back`() {
         viewModel.nextStep() // WELCOME -> ADD_CAR
-        viewModel.nextStep() // ADD_CAR -> ADD_CHARGER
-        viewModel.previousStep() // ADD_CHARGER -> ADD_CAR
+        viewModel.nextStep() // ADD_CAR -> PERMISSIONS
+        viewModel.previousStep() // PERMISSIONS -> ADD_CAR
         assertEquals(OnboardingStep.ADD_CAR, viewModel.uiState.value.step)
     }
 
@@ -85,7 +85,7 @@ class OnboardingViewModelTest {
         assertEquals("Model 3", car.model)
         assertEquals(75.0, car.batteryCapacityKwh, 0.01)
         assertTrue(car.isFavorite)
-        assertEquals(OnboardingStep.ADD_CHARGER, viewModel.uiState.value.step)
+        assertEquals(OnboardingStep.PERMISSIONS, viewModel.uiState.value.step)
     }
 
     @Test
@@ -111,11 +111,12 @@ class OnboardingViewModelTest {
     }
 
     @Test
-    fun `skipCharger advances to PERMISSIONS`() {
+    fun `skipCharger advances to DONE`() {
         viewModel.nextStep() // -> ADD_CAR
+        viewModel.nextStep() // -> PERMISSIONS
         viewModel.nextStep() // -> ADD_CHARGER
         viewModel.skipCharger()
-        assertEquals(OnboardingStep.PERMISSIONS, viewModel.uiState.value.step)
+        assertEquals(OnboardingStep.DONE, viewModel.uiState.value.step)
     }
 
     @Test
@@ -167,7 +168,7 @@ class OnboardingViewModelTest {
         assertNotNull(car)
         assertEquals("My Red HotRod", car!!.make)
         assertEquals("", car.model)
-        assertEquals(OnboardingStep.ADD_CHARGER, viewModel.uiState.value.step)
+        assertEquals(OnboardingStep.PERMISSIONS, viewModel.uiState.value.step)
     }
 
     @Test

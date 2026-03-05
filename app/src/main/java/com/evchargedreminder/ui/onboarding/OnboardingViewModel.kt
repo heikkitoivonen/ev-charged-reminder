@@ -15,7 +15,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 enum class OnboardingStep {
-    WELCOME, ADD_CAR, ADD_CHARGER, PERMISSIONS, DONE
+    WELCOME, ADD_CAR, PERMISSIONS, ADD_CHARGER, DONE
 }
 
 data class OnboardingUiState(
@@ -51,9 +51,9 @@ class OnboardingViewModel @Inject constructor(
         _uiState.update {
             val next = when (it.step) {
                 OnboardingStep.WELCOME -> OnboardingStep.ADD_CAR
-                OnboardingStep.ADD_CAR -> OnboardingStep.ADD_CHARGER
-                OnboardingStep.ADD_CHARGER -> OnboardingStep.PERMISSIONS
-                OnboardingStep.PERMISSIONS -> OnboardingStep.DONE
+                OnboardingStep.ADD_CAR -> OnboardingStep.PERMISSIONS
+                OnboardingStep.PERMISSIONS -> OnboardingStep.ADD_CHARGER
+                OnboardingStep.ADD_CHARGER -> OnboardingStep.DONE
                 OnboardingStep.DONE -> OnboardingStep.DONE
             }
             it.copy(step = next)
@@ -65,9 +65,9 @@ class OnboardingViewModel @Inject constructor(
             val prev = when (it.step) {
                 OnboardingStep.WELCOME -> OnboardingStep.WELCOME
                 OnboardingStep.ADD_CAR -> OnboardingStep.WELCOME
-                OnboardingStep.ADD_CHARGER -> OnboardingStep.ADD_CAR
-                OnboardingStep.PERMISSIONS -> OnboardingStep.ADD_CHARGER
-                OnboardingStep.DONE -> OnboardingStep.PERMISSIONS
+                OnboardingStep.PERMISSIONS -> OnboardingStep.ADD_CAR
+                OnboardingStep.ADD_CHARGER -> OnboardingStep.PERMISSIONS
+                OnboardingStep.DONE -> OnboardingStep.ADD_CHARGER
             }
             it.copy(step = prev)
         }
@@ -182,12 +182,12 @@ class OnboardingViewModel @Inject constructor(
             )
             val id = carRepository.insert(car)
             carRepository.setFavorite(id)
-            _uiState.update { it.copy(isSaving = false, carSaved = true, step = OnboardingStep.ADD_CHARGER) }
+            _uiState.update { it.copy(isSaving = false, carSaved = true, step = OnboardingStep.PERMISSIONS) }
         }
     }
 
     fun skipCharger() {
-        _uiState.update { it.copy(step = OnboardingStep.PERMISSIONS) }
+        _uiState.update { it.copy(step = OnboardingStep.DONE) }
     }
 
     fun onLocationPermissionResult(granted: Boolean) {
