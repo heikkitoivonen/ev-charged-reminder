@@ -361,6 +361,14 @@ private fun PermissionsStep(state: OnboardingUiState, viewModel: OnboardingViewM
                 Text("Granted", color = MaterialTheme.colorScheme.primary)
             }
         }
+
+        if (!state.backgroundLocationGranted && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            Text(
+                text = "In Settings, tap Permissions \u2192 Location \u2192 Allow all the time",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 
     // Notification permission (API 33+)
