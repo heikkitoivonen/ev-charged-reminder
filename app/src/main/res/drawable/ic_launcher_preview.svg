@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="432" height="432" viewBox="0 0 108 108">
+  <!-- Clip to circular shape (like most launchers) -->
+  <defs>
+    <clipPath id="circle">
+      <circle cx="54" cy="54" r="54" />
+    </clipPath>
+  </defs>
+  <g clip-path="url(#circle)">
+
+    <!-- ===== BACKGROUND ===== -->
+    <rect width="108" height="108" fill="#1565C0" />
+    <circle cx="54" cy="54" r="48" fill="#1976D2" />
+    <circle cx="54" cy="54" r="36" fill="#1E88E5" />
+
+    <!-- ===== FOREGROUND ===== -->
+
+    <!-- Ground line -->
+    <rect x="18" y="72" width="72" height="2" fill="#0D47A1" />
+
+    <!-- Car body -->
+    <path d="M28,62 L28,54 C28,52 29,51 31,51 L42,51 L46,44 C47,42 49,41 51,41 L65,41 C67,41 69,42 70,44 L74,51 L77,51 C79,51 80,52 80,54 L80,62 L80,66 C80,68 78,69 76,69 L32,69 C30,69 28,68 28,66 Z" fill="#E3F2FD" />
+
+    <!-- Car roof / window area -->
+    <path d="M47,50 L50,44 C50.5,43 51.5,42.5 52,42.5 L64,42.5 C65,42.5 66,43 66.5,44 L70,50 Z" fill="#BBDEFB" />
+
+    <!-- Front window -->
+    <path d="M48,49 L51,44 C51.3,43.4 52,43.2 52.5,43.2 L57,43.2 L57,49 Z" fill="#42A5F5" />
+
+    <!-- Rear window -->
+    <path d="M58,43.2 L64,43.2 C64.8,43.2 65.5,43.6 65.8,44 L69,49 L58,49 Z" fill="#42A5F5" />
+
+    <!-- Front wheel -->
+    <circle cx="38" cy="69" r="5" fill="#0D47A1" />
+    <circle cx="38" cy="69" r="2.5" fill="#90CAF9" />
+
+    <!-- Rear wheel -->
+    <circle cx="70" cy="69" r="5" fill="#0D47A1" />
+    <circle cx="70" cy="69" r="2.5" fill="#90CAF9" />
+
+    <!-- Headlight -->
+    <rect x="79" y="55" width="2" height="4" fill="#FDD835" />
+
+    <!-- Taillight -->
+    <rect x="28" y="55" width="2" height="4" fill="#EF5350" />
+
+    <!-- Charging cable -->
+    <path d="M80,56 Q86,56 86,50 Q86,44 88,42" stroke="#78909C" stroke-width="2" fill="none" />
+
+    <!-- Charge port on car -->
+    <circle cx="80" cy="56" r="1.5" fill="#4CAF50" />
+
+    <!-- Charger post body -->
+    <rect x="85" y="30" width="6" height="42" fill="#CFD8DC" />
+
+    <!-- Post top cap -->
+    <rect x="84" y="28" width="8" height="3" fill="#90A4AE" />
+
+    <!-- Screen on charger -->
+    <rect x="86" y="33" width="4" height="7" fill="#4CAF50" />
+
+    <!-- Lightning bolt -->
+    <path d="M52,26 L48,36 L53,36 L49,46 L60,33 L55,33 L58,26 Z" fill="#FDD835" />
+    <path d="M52,26 L48,36 L53,36 L49,46 L60,33 L55,33 L58,26 Z" stroke="#F9A825" stroke-width="0.5" fill="none" />
+
+    <!-- Notification bell body -->
+    <path d="M25,28 C25,24 27,21 30,20 L30,19 C30,17.5 31,16.5 32,16.5 C33,16.5 34,17.5 34,19 L34,20 C37,21 39,24 39,28 L39,32 L40,34 L24,34 L25,32 Z" fill="#FDD835" />
+
+    <!-- Bell clapper -->
+    <circle cx="32" cy="35" r="1.5" fill="#F9A825" />
+
+    <!-- Bell ring lines -->
+    <path d="M21,26 Q20,22 22,19" stroke="#FDD835" stroke-width="1" fill="none" />
+    <path d="M43,26 Q44,22 42,19" stroke="#FDD835" stroke-width="1" fill="none" />
+
+  </g>
+</svg>
