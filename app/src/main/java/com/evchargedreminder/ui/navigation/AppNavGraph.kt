@@ -1,7 +1,5 @@
 package com.evchargedreminder.ui.navigation
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
@@ -15,7 +13,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.vectorResource
@@ -32,9 +29,12 @@ import com.evchargedreminder.ui.cars.CarListScreen
 import com.evchargedreminder.ui.chargers.ChargerEditScreen
 import com.evchargedreminder.ui.chargers.ChargerListScreen
 import com.evchargedreminder.ui.chargers.MapPickerScreen
+import com.evchargedreminder.ui.history.HistoryScreen
 import com.evchargedreminder.ui.home.HomeScreen
+import com.evchargedreminder.ui.onboarding.OnboardingScreen
 import kotlinx.serialization.Serializable
 
+@Serializable object OnboardingRoute
 @Serializable object HomeRoute
 @Serializable object CarListRoute
 @Serializable data class CarEditRoute(val carId: Long = -1L)
@@ -50,7 +50,7 @@ data class BottomNavItem(
 )
 
 @Composable
-fun AppNavHost(showOverride: Boolean = false) {
+fun AppNavHost(showOverride: Boolean = false, onboardingCompleted: Boolean = true) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
@@ -62,7 +62,8 @@ fun AppNavHost(showOverride: Boolean = false) {
         BottomNavItem("History", Icons.Default.DateRange, HistoryRoute)
     )
 
-    val showBottomBar = bottomNavItems.any { item ->
+    val isOnboarding = currentDestination?.hasRoute(OnboardingRoute::class) == true
+    val showBottomBar = !isOnboarding && bottomNavItems.any { item ->
         currentDestination?.hasRoute(item.route::class) == true
     }
 
@@ -92,9 +93,21 @@ fun AppNavHost(showOverride: Boolean = false) {
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = HomeRoute,
+            startDestination = if (onboardingCompleted) HomeRoute else OnboardingRoute,
             modifier = Modifier.padding(innerPadding)
         ) {
+            composable<OnboardingRoute> {
+                OnboardingScreen(
+                    onComplete = {
+                        navController.navigate(HomeRoute) {
+                            popUpTo(OnboardingRoute) { inclusive = true }
+                        }
+                    },
+                    onAddCharger = {
+                        navController.navigate(ChargerEditRoute())
+                    }
+                )
+            }
             composable<HomeRoute> {
                 HomeScreen(showOverride = showOverride)
             }
@@ -150,9 +163,7 @@ fun AppNavHost(showOverride: Boolean = false) {
                 )
             }
             composable<HistoryRoute> {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("History — coming soon")
-                }
+                HistoryScreen()
             }
         }
     }

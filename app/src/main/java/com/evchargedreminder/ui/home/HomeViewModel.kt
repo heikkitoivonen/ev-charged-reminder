@@ -162,8 +162,13 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    override fun onCleared() {
+    /** Visible for testing — cancels the periodic refresh loop. */
+    fun stopRefreshing() {
         refreshJob?.cancel()
+    }
+
+    override fun onCleared() {
+        stopRefreshing()
         super.onCleared()
     }
 }

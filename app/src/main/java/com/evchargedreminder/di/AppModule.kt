@@ -1,5 +1,7 @@
 package com.evchargedreminder.di
 
+import com.evchargedreminder.data.OnboardingPreferences
+import com.evchargedreminder.data.OnboardingPreferencesImpl
 import com.evchargedreminder.data.repository.CarRepository
 import com.evchargedreminder.data.repository.CarRepositoryImpl
 import com.evchargedreminder.data.repository.ChargerRepository
@@ -30,4 +32,7 @@ abstract class AppModule {
 
     @Binds
     abstract fun bindLocationProvider(impl: FusedLocationProvider): LocationProvider
+
+    @Binds
+    abstract fun bindOnboardingPreferences(impl: OnboardingPreferencesImpl): OnboardingPreferences
 }
