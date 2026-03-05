@@ -126,6 +126,12 @@ class OnboardingViewModelTest {
     }
 
     @Test
+    fun `onBackgroundLocationPermissionResult updates state`() {
+        viewModel.onBackgroundLocationPermissionResult(true)
+        assertTrue(viewModel.uiState.value.backgroundLocationGranted)
+    }
+
+    @Test
     fun `onNotificationPermissionResult updates state`() {
         viewModel.onNotificationPermissionResult(true)
         assertTrue(viewModel.uiState.value.notificationGranted)

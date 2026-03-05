@@ -32,6 +32,7 @@ data class OnboardingUiState(
     val availableModels: List<String> = emptyList(),
     val availableTrims: List<String> = emptyList(),
     val locationGranted: Boolean = false,
+    val backgroundLocationGranted: Boolean = false,
     val notificationGranted: Boolean = false,
     val isSaving: Boolean = false,
     val carSaved: Boolean = false,
@@ -192,6 +193,10 @@ class OnboardingViewModel @Inject constructor(
 
     fun onLocationPermissionResult(granted: Boolean) {
         _uiState.update { it.copy(locationGranted = granted) }
+    }
+
+    fun onBackgroundLocationPermissionResult(granted: Boolean) {
+        _uiState.update { it.copy(backgroundLocationGranted = granted) }
     }
 
     fun onNotificationPermissionResult(granted: Boolean) {

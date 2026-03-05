@@ -1,9 +1,18 @@
 package com.evchargedreminder.ui.onboarding
 
 import android.Manifest
+import android.content.Intent
+import android.net.Uri
 import android.os.Build
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -238,16 +247,41 @@ private fun AddChargerStep(onAddCharger: () -> Unit, onSkip: () -> Unit) {
 
 @Composable
 private fun PermissionsStep(state: OnboardingUiState, viewModel: OnboardingViewModel) {
+    val context = LocalContext.current
+
     val locationLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
         viewModel.onLocationPermissionResult(granted)
     }
 
+    val backgroundLocationLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        viewModel.onBackgroundLocationPermissionResult(granted)
+    }
+
     val notificationLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
         viewModel.onNotificationPermissionResult(granted)
+    }
+
+    // Re-check background location permission when returning from Settings
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                val bgGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    ContextCompat.checkSelfPermission(
+                        context, Manifest.permission.ACCESS_BACKGROUND_LOCATION
+                    ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                } else true
+                viewModel.onBackgroundLocationPermissionResult(bgGranted)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     Text("Permissions", style = MaterialTheme.typography.headlineSmall)
@@ -259,7 +293,7 @@ private fun PermissionsStep(state: OnboardingUiState, viewModel: OnboardingViewM
 
     Spacer(Modifier.height(16.dp))
 
-    // Location permission
+    // Foreground location permission
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -281,6 +315,45 @@ private fun PermissionsStep(state: OnboardingUiState, viewModel: OnboardingViewM
             }
         } else {
             Text("Granted", color = MaterialTheme.colorScheme.primary)
+        }
+    }
+
+    // Background location permission (shown after foreground is granted)
+    if (state.locationGranted && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Background Location", style = MaterialTheme.typography.titleSmall)
+                Text(
+                    if (state.backgroundLocationGranted) "Granted"
+                    else "Required for automatic charger detection",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            if (!state.backgroundLocationGranted) {
+                Button(onClick = {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                        // API 30+: must send user to app settings
+                        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                            data = Uri.fromParts("package", context.packageName, null)
+                        }
+                        context.startActivity(intent)
+                    } else {
+                        // API 29: can request directly
+                        backgroundLocationLauncher.launch(
+                            Manifest.permission.ACCESS_BACKGROUND_LOCATION
+                        )
+                    }
+                }) {
+                    Text(if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) "Open Settings" else "Grant")
+                }
+            } else {
+                Text("Granted", color = MaterialTheme.colorScheme.primary)
+            }
         }
     }
 
