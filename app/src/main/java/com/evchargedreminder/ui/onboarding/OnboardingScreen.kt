@@ -92,10 +92,13 @@ fun OnboardingScreen(
                     state = state,
                     viewModel = viewModel
                 )
-                OnboardingStep.ADD_CHARGER -> AddChargerStep(
-                    onAddCharger = onAddCharger,
-                    onSkip = { viewModel.skipCharger() }
-                )
+                OnboardingStep.ADD_CHARGER -> {
+                    LaunchedEffect(Unit) { viewModel.checkChargerAdded() }
+                    AddChargerStep(
+                        onAddCharger = onAddCharger,
+                        onSkip = { viewModel.skipCharger() }
+                    )
+                }
                 OnboardingStep.DONE -> DoneStep(onComplete = {
                     viewModel.completeOnboarding()
                     onComplete()

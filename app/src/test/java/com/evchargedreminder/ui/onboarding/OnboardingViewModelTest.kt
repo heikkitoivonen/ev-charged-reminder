@@ -2,7 +2,10 @@ package com.evchargedreminder.ui.onboarding
 
 import com.evchargedreminder.data.OnboardingPreferences
 import com.evchargedreminder.data.repository.CarRepository
+import com.evchargedreminder.data.repository.ChargerRepository
 import com.evchargedreminder.domain.model.Car
+import com.evchargedreminder.domain.model.Charger
+import com.evchargedreminder.domain.model.ChargerType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -24,6 +27,7 @@ class OnboardingViewModelTest {
 
     private val testDispatcher = UnconfinedTestDispatcher()
     private lateinit var fakeCarRepo: FakeOnboardingCarRepo
+    private lateinit var fakeChargerRepo: FakeOnboardingChargerRepo
     private lateinit var fakePrefs: FakeOnboardingPreferences
     private lateinit var viewModel: OnboardingViewModel
 
@@ -31,8 +35,9 @@ class OnboardingViewModelTest {
     fun setup() {
         Dispatchers.setMain(testDispatcher)
         fakeCarRepo = FakeOnboardingCarRepo()
+        fakeChargerRepo = FakeOnboardingChargerRepo()
         fakePrefs = FakeOnboardingPreferences()
-        viewModel = OnboardingViewModel(fakeCarRepo, fakePrefs)
+        viewModel = OnboardingViewModel(fakeCarRepo, fakeChargerRepo, fakePrefs)
     }
 
     @After
@@ -187,6 +192,37 @@ class OnboardingViewModelTest {
 
         assertNotNull(viewModel.uiState.value.error)
     }
+
+    @Test
+    fun `checkChargerAdded advances to DONE when charger exists`() = runTest {
+        // Navigate to ADD_CHARGER step
+        viewModel.nextStep() // -> ADD_CAR
+        viewModel.nextStep() // -> PERMISSIONS
+        viewModel.nextStep() // -> ADD_CHARGER
+        assertEquals(OnboardingStep.ADD_CHARGER, viewModel.uiState.value.step)
+
+        // Simulate a charger being added
+        fakeChargerRepo.insert(Charger(
+            name = "Home", latitude = 0.0, longitude = 0.0,
+            maxChargingSpeedKw = 7.7, chargerType = ChargerType.LEVEL2_EVSE_32A
+        ))
+
+        viewModel.checkChargerAdded()
+
+        assertEquals(OnboardingStep.DONE, viewModel.uiState.value.step)
+        assertTrue(fakePrefs.isCompleted)
+    }
+
+    @Test
+    fun `checkChargerAdded does nothing when no chargers`() = runTest {
+        viewModel.nextStep() // -> ADD_CAR
+        viewModel.nextStep() // -> PERMISSIONS
+        viewModel.nextStep() // -> ADD_CHARGER
+
+        viewModel.checkChargerAdded()
+
+        assertEquals(OnboardingStep.ADD_CHARGER, viewModel.uiState.value.step)
+    }
 }
 
 // --- Fakes ---
@@ -224,5 +260,28 @@ private class FakeOnboardingCarRepo : CarRepository {
     override suspend fun setFavorite(carId: Long) {
         cars.forEachIndexed { i, car -> cars[i] = car.copy(isFavorite = car.id == carId) }
         flow.value = cars.toList()
+    }
+}
+
+private class FakeOnboardingChargerRepo : ChargerRepository {
+    private var nextId = 1L
+    private val chargers = mutableListOf<Charger>()
+    private val flow = MutableStateFlow<List<Charger>>(emptyList())
+
+    override fun getAll(): Flow<List<Charger>> = flow.map { it.toList() }
+    override suspend fun getById(id: Long): Charger? = chargers.find { it.id == id }
+    override suspend fun insert(charger: Charger): Long {
+        val c = charger.copy(id = nextId++)
+        chargers.add(c)
+        flow.value = chargers.toList()
+        return c.id
+    }
+    override suspend fun update(charger: Charger) {
+        val i = chargers.indexOfFirst { it.id == charger.id }
+        if (i >= 0) { chargers[i] = charger; flow.value = chargers.toList() }
+    }
+    override suspend fun delete(charger: Charger) {
+        chargers.removeAll { it.id == charger.id }
+        flow.value = chargers.toList()
     }
 }

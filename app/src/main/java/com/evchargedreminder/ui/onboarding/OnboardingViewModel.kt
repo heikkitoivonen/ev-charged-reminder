@@ -5,11 +5,13 @@ import androidx.lifecycle.viewModelScope
 import com.evchargedreminder.data.OnboardingPreferences
 import com.evchargedreminder.data.bundled.BundledEvData
 import com.evchargedreminder.data.repository.CarRepository
+import com.evchargedreminder.data.repository.ChargerRepository
 import com.evchargedreminder.domain.model.Car
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -42,6 +44,7 @@ data class OnboardingUiState(
 @HiltViewModel
 class OnboardingViewModel @Inject constructor(
     private val carRepository: CarRepository,
+    private val chargerRepository: ChargerRepository,
     private val onboardingPreferences: OnboardingPreferences
 ) : ViewModel() {
 
@@ -184,6 +187,17 @@ class OnboardingViewModel @Inject constructor(
             val id = carRepository.insert(car)
             carRepository.setFavorite(id)
             _uiState.update { it.copy(isSaving = false, carSaved = true, step = OnboardingStep.PERMISSIONS) }
+        }
+    }
+
+    fun checkChargerAdded() {
+        if (_uiState.value.step != OnboardingStep.ADD_CHARGER) return
+        viewModelScope.launch {
+            val chargers = chargerRepository.getAll().first()
+            if (chargers.isNotEmpty()) {
+                onboardingPreferences.isCompleted = true
+                _uiState.update { it.copy(step = OnboardingStep.DONE) }
+            }
         }
     }
 
