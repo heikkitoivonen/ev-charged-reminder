@@ -8,8 +8,10 @@ import com.evchargedreminder.domain.model.Charger
 import com.evchargedreminder.domain.model.ChargerType
 import com.evchargedreminder.domain.model.ChargingSession
 import com.evchargedreminder.domain.model.SessionEndReason
+import com.evchargedreminder.domain.usecase.DetectChargingSessionUseCase
 import com.evchargedreminder.domain.usecase.EstimateChargingTimeUseCase
 import com.evchargedreminder.domain.usecase.ManageSessionUseCase
+import com.evchargedreminder.util.LocationProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -38,6 +40,8 @@ class HomeViewModelTest {
     private lateinit var fakeSessionRepo: FakeHomeSessionRepo
     private lateinit var manageSession: ManageSessionUseCase
     private lateinit var estimateUseCase: EstimateChargingTimeUseCase
+    private lateinit var fakeLocationProvider: FakeLocationProvider
+    private lateinit var detectUseCase: DetectChargingSessionUseCase
 
     @Before
     fun setup() {
@@ -45,8 +49,12 @@ class HomeViewModelTest {
         fakeCarRepo = FakeHomeCarRepo()
         fakeChargerRepo = FakeHomeChargerRepo()
         fakeSessionRepo = FakeHomeSessionRepo()
+        fakeLocationProvider = FakeLocationProvider()
         manageSession = ManageSessionUseCase(fakeSessionRepo, fakeChargerRepo, fakeCarRepo)
         estimateUseCase = EstimateChargingTimeUseCase(fakeCarRepo, fakeChargerRepo)
+        detectUseCase = DetectChargingSessionUseCase(
+            fakeChargerRepo, fakeCarRepo, fakeSessionRepo, fakeLocationProvider
+        )
     }
 
     @After
@@ -56,7 +64,8 @@ class HomeViewModelTest {
 
     private fun createViewModel(): HomeViewModel {
         return HomeViewModel(
-            manageSession, fakeCarRepo, fakeChargerRepo, fakeSessionRepo, estimateUseCase
+            manageSession, fakeCarRepo, fakeChargerRepo, fakeSessionRepo, estimateUseCase,
+            detectUseCase
         )
     }
 
@@ -209,6 +218,60 @@ class HomeViewModelTest {
         assertEquals(95, vm.uiState.value.editTargetPct)
     }
 
+    @Test
+    fun `shows nearby chargers when within radius`() {
+        fakeLocationProvider.location = Pair(37.7749, -122.4194) // Same as charger location
+        runBlocking {
+            fakeChargerRepo.insert(testCharger())
+        }
+
+        val vm = createViewModel()
+        advanceAndStop(vm)
+
+        val state = vm.uiState.value
+        assertEquals(1, state.nearbyChargers.size)
+        assertEquals("Home Charger", state.nearbyChargers[0].charger.name)
+    }
+
+    @Test
+    fun `manualStartSession creates session and refreshes`() {
+        fakeLocationProvider.location = Pair(37.7749, -122.4194)
+        runBlocking {
+            fakeCarRepo.insert(testCar().copy(isFavorite = true))
+            fakeChargerRepo.insert(testCharger())
+        }
+
+        val vm = createViewModel()
+        advanceAndStop(vm)
+        assertNull(vm.uiState.value.activeSession)
+
+        vm.manualStartSession(1)
+        advancePending()
+
+        assertNotNull(vm.uiState.value.activeSession)
+    }
+
+    @Test
+    fun `suppressAutoStart adds charger id to suppressed set`() {
+        val vm = createViewModel()
+        advanceAndStop(vm)
+
+        vm.suppressAutoStart(1)
+        assertTrue(1L in vm.uiState.value.suppressedChargerIds)
+    }
+
+    @Test
+    fun `unsuppressAutoStart removes charger id from suppressed set`() {
+        val vm = createViewModel()
+        advanceAndStop(vm)
+
+        vm.suppressAutoStart(1)
+        assertTrue(1L in vm.uiState.value.suppressedChargerIds)
+
+        vm.unsuppressAutoStart(1)
+        assertFalse(1L in vm.uiState.value.suppressedChargerIds)
+    }
+
     private fun testCar() = Car(
         year = 2024, make = "Tesla", model = "Model 3",
         batteryCapacityKwh = 75.0, createdAt = Instant.now()
@@ -280,6 +343,11 @@ private class FakeHomeChargerRepo : ChargerRepository {
         chargers.removeAll { it.id == charger.id }
         flow.value = chargers.toList()
     }
+}
+
+private class FakeLocationProvider : LocationProvider {
+    var location: Pair<Double, Double>? = null
+    override suspend fun getCurrentLocation(): Pair<Double, Double>? = location
 }
 
 private class FakeHomeSessionRepo : ChargingSessionRepository {

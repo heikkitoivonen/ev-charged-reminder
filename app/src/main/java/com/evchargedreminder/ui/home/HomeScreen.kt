@@ -1,6 +1,7 @@
 package com.evchargedreminder.ui.home
 
 import com.evchargedreminder.domain.model.displayName
+import com.evchargedreminder.domain.usecase.NearbyCharger
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -27,10 +28,12 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -83,9 +86,20 @@ fun HomeScreen(
                         onCancelEdit = { viewModel.cancelEditing() },
                         onEndSession = { viewModel.endSession() }
                     )
+                    NearbyChargersSection(
+                        state = state,
+                        onStartSession = { viewModel.manualStartSession(it) },
+                        onSuppress = { viewModel.suppressAutoStart(it) },
+                        onUnsuppress = { viewModel.unsuppressAutoStart(it) }
+                    )
                 }
                 else -> {
-                    NotChargingContent()
+                    NotChargingContent(
+                        state = state,
+                        onStartSession = { viewModel.manualStartSession(it) },
+                        onSuppress = { viewModel.suppressAutoStart(it) },
+                        onUnsuppress = { viewModel.unsuppressAutoStart(it) }
+                    )
                 }
             }
         }
@@ -93,7 +107,12 @@ fun HomeScreen(
 }
 
 @Composable
-private fun NotChargingContent() {
+private fun NotChargingContent(
+    state: HomeUiState,
+    onStartSession: (Long) -> Unit,
+    onSuppress: (Long) -> Unit,
+    onUnsuppress: (Long) -> Unit
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -118,6 +137,131 @@ private fun NotChargingContent() {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
             )
+        }
+    }
+
+    NearbyChargersSection(
+        state = state,
+        onStartSession = onStartSession,
+        onSuppress = onSuppress,
+        onUnsuppress = onUnsuppress
+    )
+}
+
+@Composable
+private fun NearbyChargersSection(
+    state: HomeUiState,
+    onStartSession: (Long) -> Unit,
+    onSuppress: (Long) -> Unit,
+    onUnsuppress: (Long) -> Unit
+) {
+    // Filter out the charger that has an active session (already shown above)
+    val chargersToShow = state.nearbyChargers.filter { nearby ->
+        nearby.charger.id != state.activeSession?.chargerId
+    }
+    if (chargersToShow.isEmpty()) return
+
+    Text(
+        text = "Nearby Chargers",
+        style = MaterialTheme.typography.titleMedium
+    )
+
+    val useImperial = remember {
+        java.util.Locale.getDefault().country in setOf("US", "LR", "MM")
+    }
+
+    chargersToShow.forEach { nearby ->
+        NearbyChargerCard(
+            nearby = nearby,
+            isSuppressed = nearby.charger.id in state.suppressedChargerIds,
+            hasActiveSession = state.activeSession != null,
+            isStarting = state.isStartingSession,
+            useImperial = useImperial,
+            onStartSession = onStartSession,
+            onSuppress = onSuppress,
+            onUnsuppress = onUnsuppress
+        )
+    }
+}
+
+@Composable
+private fun NearbyChargerCard(
+    nearby: NearbyCharger,
+    isSuppressed: Boolean,
+    hasActiveSession: Boolean,
+    isStarting: Boolean,
+    useImperial: Boolean,
+    onStartSession: (Long) -> Unit,
+    onSuppress: (Long) -> Unit,
+    onUnsuppress: (Long) -> Unit
+) {
+    val charger = nearby.charger
+    val distanceText = if (useImperial) {
+        "${(nearby.distanceMeters * 3.28084).toInt()}ft away"
+    } else {
+        "${nearby.distanceMeters.toInt()}m away"
+    }
+
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = charger.name,
+                        style = MaterialTheme.typography.titleSmall
+                    )
+                    Text(
+                        text = "${charger.chargerType.label} \u2022 $distanceText",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            if (isSuppressed) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Auto-start suppressed",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    TextButton(onClick = { onUnsuppress(charger.id) }) {
+                        Text("Undo")
+                    }
+                }
+            } else if (!hasActiveSession) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = { onStartSession(charger.id) },
+                        enabled = !isStarting,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Start Charging")
+                    }
+                    OutlinedButton(
+                        onClick = { onSuppress(charger.id) },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Don't Charge")
+                    }
+                }
+            }
         }
     }
 }

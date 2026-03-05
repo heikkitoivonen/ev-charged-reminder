@@ -18,6 +18,11 @@ data class ProximityResult(
     val distanceMeters: Double?
 )
 
+data class NearbyCharger(
+    val charger: Charger,
+    val distanceMeters: Double
+)
+
 @Singleton
 class DetectChargingSessionUseCase @Inject constructor(
     private val chargerRepository: ChargerRepository,
@@ -53,6 +58,26 @@ class DetectChargingSessionUseCase @Inject constructor(
         }
 
         return ProximityResult(nearestCharger, nearestDistance)
+    }
+
+    /**
+     * Returns all chargers within their configured radius, sorted by distance.
+     */
+    suspend fun checkAllNearby(): List<NearbyCharger> {
+        val location = locationProvider.getCurrentLocation()
+            ?: return emptyList()
+
+        val (lat, lng) = location
+        val chargers = chargerRepository.getAll().first()
+
+        return chargers.mapNotNull { charger ->
+            val distance = DistanceUtils.haversineDistance(
+                lat, lng, charger.latitude, charger.longitude
+            )
+            if (distance <= charger.radiusMeters) {
+                NearbyCharger(charger, distance)
+            } else null
+        }.sortedBy { it.distanceMeters }
     }
 
     /**

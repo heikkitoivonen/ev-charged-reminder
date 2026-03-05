@@ -9,8 +9,10 @@ import com.evchargedreminder.domain.model.Car
 import com.evchargedreminder.domain.model.Charger
 import com.evchargedreminder.domain.model.ChargingSession
 import com.evchargedreminder.domain.model.SessionEndReason
+import com.evchargedreminder.domain.usecase.DetectChargingSessionUseCase
 import com.evchargedreminder.domain.usecase.EstimateChargingTimeUseCase
 import com.evchargedreminder.domain.usecase.ManageSessionUseCase
+import com.evchargedreminder.domain.usecase.NearbyCharger
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -31,7 +33,10 @@ data class HomeUiState(
     val isEditing: Boolean = false,
     val editStartPct: Int = 20,
     val editTargetPct: Int = 80,
-    val showOverrideControls: Boolean = false
+    val showOverrideControls: Boolean = false,
+    val nearbyChargers: List<NearbyCharger> = emptyList(),
+    val suppressedChargerIds: Set<Long> = emptySet(),
+    val isStartingSession: Boolean = false
 )
 
 @HiltViewModel
@@ -40,7 +45,8 @@ class HomeViewModel @Inject constructor(
     private val carRepository: CarRepository,
     private val chargerRepository: ChargerRepository,
     private val chargingSessionRepository: ChargingSessionRepository,
-    private val estimateUseCase: EstimateChargingTimeUseCase
+    private val estimateUseCase: EstimateChargingTimeUseCase,
+    private val detectUseCase: DetectChargingSessionUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -68,6 +74,8 @@ class HomeViewModel @Inject constructor(
 
     private suspend fun refreshSession() {
         val session = manageSession.getActiveSession()
+        val nearby = try { detectUseCase.checkAllNearby() } catch (_: Exception) { emptyList() }
+
         if (session == null) {
             _uiState.update {
                 it.copy(
@@ -76,7 +84,8 @@ class HomeViewModel @Inject constructor(
                     car = null,
                     charger = null,
                     estimatedMinutesRemaining = 0,
-                    progressPercent = 0f
+                    progressPercent = 0f,
+                    nearbyChargers = nearby
                 )
             }
             return
@@ -94,7 +103,8 @@ class HomeViewModel @Inject constructor(
                 car = car,
                 charger = charger,
                 estimatedMinutesRemaining = minutesRemaining,
-                progressPercent = progress
+                progressPercent = progress,
+                nearbyChargers = nearby
             )
         }
     }
@@ -159,6 +169,29 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             manageSession.endSession(session.id, SessionEndReason.MANUAL)
             refreshSession()
+        }
+    }
+
+    fun manualStartSession(chargerId: Long) {
+        val charger = _uiState.value.nearbyChargers.find { it.charger.id == chargerId }?.charger
+            ?: return
+        _uiState.update { it.copy(isStartingSession = true) }
+        viewModelScope.launch {
+            detectUseCase.startSession(charger)
+            _uiState.update { it.copy(isStartingSession = false) }
+            refreshSession()
+        }
+    }
+
+    fun suppressAutoStart(chargerId: Long) {
+        _uiState.update {
+            it.copy(suppressedChargerIds = it.suppressedChargerIds + chargerId)
+        }
+    }
+
+    fun unsuppressAutoStart(chargerId: Long) {
+        _uiState.update {
+            it.copy(suppressedChargerIds = it.suppressedChargerIds - chargerId)
         }
     }
 
