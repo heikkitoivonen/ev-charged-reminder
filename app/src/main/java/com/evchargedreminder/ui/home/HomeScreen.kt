@@ -1,5 +1,6 @@
 package com.evchargedreminder.ui.home
 
+import com.evchargedreminder.domain.model.displayName
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -133,7 +134,7 @@ private fun ChargingActiveContent(
 ) {
     val session = state.activeSession ?: return
     val chargerName = state.charger?.name ?: "Unknown charger"
-    val carName = state.car?.let { "${it.year} ${it.make} ${it.model}" } ?: "Unknown car"
+    val carName = state.car?.displayName ?: "Unknown car"
 
     // Status card
     Card(

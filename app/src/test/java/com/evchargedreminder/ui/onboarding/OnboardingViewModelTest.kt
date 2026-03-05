@@ -143,6 +143,42 @@ class OnboardingViewModelTest {
         assertTrue(state.availableModels.isNotEmpty())
         assertEquals("Tesla", state.make)
     }
+
+    @Test
+    fun `setCustomMode clears form fields`() {
+        viewModel.updateMake("Tesla")
+        viewModel.setCustomMode(true)
+        val state = viewModel.uiState.value
+        assertTrue(state.isCustom)
+        assertEquals("", state.make)
+        assertEquals("", state.model)
+        assertTrue(state.availableModels.isEmpty())
+    }
+
+    @Test
+    fun `saveCar in custom mode succeeds with blank model`() = runTest {
+        viewModel.setCustomMode(true)
+        viewModel.updateMake("My Red HotRod")
+        viewModel.updateBatteryCapacity("50.0")
+
+        viewModel.saveCar()
+
+        val car = fakeCarRepo.getFavorite()
+        assertNotNull(car)
+        assertEquals("My Red HotRod", car!!.make)
+        assertEquals("", car.model)
+        assertEquals(OnboardingStep.ADD_CHARGER, viewModel.uiState.value.step)
+    }
+
+    @Test
+    fun `saveCar in custom mode shows error when name is blank`() {
+        viewModel.setCustomMode(true)
+        viewModel.updateBatteryCapacity("50.0")
+
+        viewModel.saveCar()
+
+        assertNotNull(viewModel.uiState.value.error)
+    }
 }
 
 // --- Fakes ---

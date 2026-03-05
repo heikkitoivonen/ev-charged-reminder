@@ -18,6 +18,7 @@ import javax.inject.Inject
 
 data class CarEditUiState(
     val isEditMode: Boolean = false,
+    val isCustom: Boolean = false,
     val existingCarId: Long? = null,
     val year: Int = 2024,
     val make: String = "",
@@ -58,9 +59,11 @@ class CarEditViewModel @Inject constructor(
     private fun loadExistingCar(carId: Long) {
         viewModelScope.launch {
             val car = carRepository.getById(carId) ?: return@launch
+            val isCustomCar = car.model.isBlank()
             _uiState.update {
                 it.copy(
                     isEditMode = true,
+                    isCustom = isCustomCar,
                     existingCarId = car.id,
                     year = car.year,
                     make = car.make,
@@ -71,10 +74,25 @@ class CarEditViewModel @Inject constructor(
                     maxAcceptRateKw = car.maxAcceptRateKw?.toString() ?: "",
                     defaultStartPct = car.defaultStartPct,
                     defaultTargetPct = car.defaultTargetPct,
-                    availableModels = BundledEvData.getModelsForMake(car.make),
-                    availableTrims = BundledEvData.getTrimsForMakeAndModel(car.make, car.model)
+                    availableModels = if (isCustomCar) emptyList() else BundledEvData.getModelsForMake(car.make),
+                    availableTrims = if (isCustomCar) emptyList() else BundledEvData.getTrimsForMakeAndModel(car.make, car.model)
                 )
             }
+        }
+    }
+
+    fun setCustomMode(custom: Boolean) {
+        _uiState.update {
+            it.copy(
+                isCustom = custom,
+                make = "",
+                model = "",
+                trim = "",
+                batteryCapacityKwh = "",
+                autoFilled = false,
+                availableModels = emptyList(),
+                availableTrims = emptyList()
+            )
         }
     }
 
@@ -167,8 +185,11 @@ class CarEditViewModel @Inject constructor(
     fun saveCar() {
         val state = _uiState.value
         val capacity = state.batteryCapacityKwh.toDoubleOrNull()
-        if (state.make.isBlank() || state.model.isBlank() || capacity == null || capacity <= 0) {
-            _uiState.update { it.copy(error = "Please fill in make, model, and a valid battery capacity.") }
+        val nameValid = if (state.isCustom) state.make.isNotBlank() else state.make.isNotBlank() && state.model.isNotBlank()
+        if (!nameValid || capacity == null || capacity <= 0) {
+            val msg = if (state.isCustom) "Please fill in the car name and a valid battery capacity."
+                else "Please fill in make, model, and a valid battery capacity."
+            _uiState.update { it.copy(error = msg) }
             return
         }
 
@@ -180,8 +201,8 @@ class CarEditViewModel @Inject constructor(
                 id = state.existingCarId ?: 0,
                 year = state.year,
                 make = state.make.trim(),
-                model = state.model.trim(),
-                trim = state.trim.trim().ifBlank { null },
+                model = if (state.isCustom) "" else state.model.trim(),
+                trim = if (state.isCustom) null else state.trim.trim().ifBlank { null },
                 isHybrid = state.isHybrid,
                 batteryCapacityKwh = capacity,
                 maxAcceptRateKw = maxRate,

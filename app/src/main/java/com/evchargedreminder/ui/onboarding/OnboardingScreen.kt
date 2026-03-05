@@ -131,40 +131,58 @@ private fun AddCarStep(state: OnboardingUiState, viewModel: OnboardingViewModel)
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
 
-    // Year dropdown
-    DropdownField(
-        label = "Year",
-        value = state.year.toString(),
-        options = (2026 downTo 2015).map { it.toString() },
-        onSelect = { viewModel.updateYear(it.toInt()) }
-    )
-
-    // Make dropdown (editable)
-    EditableDropdownField(
-        label = "Make",
-        value = state.make,
-        options = state.availableMakes,
-        onValueChange = { viewModel.updateMake(it) }
-    )
-
-    // Model dropdown (editable)
-    if (state.make.isNotBlank()) {
-        EditableDropdownField(
-            label = "Model",
-            value = state.model,
-            options = state.availableModels,
-            onValueChange = { viewModel.updateModel(it) }
-        )
+    // Custom toggle
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text("My car isn't listed")
+        Switch(checked = state.isCustom, onCheckedChange = { viewModel.setCustomMode(it) })
     }
 
-    // Trim dropdown (if trims available)
-    if (state.availableTrims.isNotEmpty()) {
-        EditableDropdownField(
-            label = "Trim",
-            value = state.trim,
-            options = state.availableTrims,
-            onValueChange = { viewModel.updateTrim(it) }
+    if (state.isCustom) {
+        // Custom mode: single name field
+        OutlinedTextField(
+            value = state.make,
+            onValueChange = { viewModel.updateMake(it) },
+            label = { Text("Car Name") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
         )
+    } else {
+        // Standard mode: Year / Make / Model / Trim
+        DropdownField(
+            label = "Year",
+            value = state.year.toString(),
+            options = (2026 downTo 2015).map { it.toString() },
+            onSelect = { viewModel.updateYear(it.toInt()) }
+        )
+
+        EditableDropdownField(
+            label = "Make",
+            value = state.make,
+            options = state.availableMakes,
+            onValueChange = { viewModel.updateMake(it) }
+        )
+
+        if (state.make.isNotBlank()) {
+            EditableDropdownField(
+                label = "Model",
+                value = state.model,
+                options = state.availableModels,
+                onValueChange = { viewModel.updateModel(it) }
+            )
+        }
+
+        if (state.availableTrims.isNotEmpty()) {
+            EditableDropdownField(
+                label = "Trim",
+                value = state.trim,
+                options = state.availableTrims,
+                onValueChange = { viewModel.updateTrim(it) }
+            )
+        }
     }
 
     // Battery capacity

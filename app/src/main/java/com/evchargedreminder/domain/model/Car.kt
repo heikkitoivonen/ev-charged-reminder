@@ -16,3 +16,6 @@ data class Car(
     val isFavorite: Boolean = false,
     val createdAt: Instant = Instant.now()
 )
+
+val Car.displayName: String
+    get() = if (model.isBlank()) make else "$year $make $model"

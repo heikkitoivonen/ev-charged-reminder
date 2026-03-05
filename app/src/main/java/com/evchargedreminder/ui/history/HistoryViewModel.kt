@@ -6,6 +6,7 @@ import com.evchargedreminder.data.repository.CarRepository
 import com.evchargedreminder.data.repository.ChargerRepository
 import com.evchargedreminder.data.repository.ChargingSessionRepository
 import com.evchargedreminder.domain.model.Car
+import com.evchargedreminder.domain.model.displayName
 import com.evchargedreminder.domain.model.Charger
 import com.evchargedreminder.domain.model.ChargingSession
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -73,7 +74,7 @@ class HistoryViewModel @Inject constructor(
                     val charger = chargerMap[session.chargerId]
                     HistoryItem(
                         session = session,
-                        carName = car?.let { "${it.year} ${it.make} ${it.model}" } ?: "Unknown car",
+                        carName = car?.displayName ?: "Unknown car",
                         chargerName = charger?.name ?: "Unknown charger"
                     )
                 }

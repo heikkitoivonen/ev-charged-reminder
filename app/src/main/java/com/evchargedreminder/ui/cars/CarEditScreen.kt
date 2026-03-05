@@ -84,45 +84,66 @@ fun CarEditScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Year
-            DropdownField(
-                label = "Year",
-                value = state.year.toString(),
-                options = (2026 downTo 2015).map { it.toString() },
-                onSelect = { viewModel.updateYear(it.toInt()) }
-            )
+            // Custom toggle
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("My car isn't listed")
+                Switch(
+                    checked = state.isCustom,
+                    onCheckedChange = { viewModel.setCustomMode(it) }
+                )
+            }
 
-            // Make
-            EditableDropdownField(
-                label = "Make",
-                value = state.make,
-                options = state.availableMakes,
-                onValueChange = { viewModel.updateMake(it) }
-            )
-
-            // Model
-            EditableDropdownField(
-                label = "Model",
-                value = state.model,
-                options = state.availableModels,
-                onValueChange = { viewModel.updateModel(it) }
-            )
-
-            // Trim
-            if (state.availableTrims.isNotEmpty()) {
-                EditableDropdownField(
-                    label = "Trim (optional)",
-                    value = state.trim,
-                    options = state.availableTrims,
-                    onValueChange = { viewModel.updateTrim(it) }
+            if (state.isCustom) {
+                // Custom mode: single name field
+                OutlinedTextField(
+                    value = state.make,
+                    onValueChange = { viewModel.updateMake(it) },
+                    label = { Text("Car Name") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
                 )
             } else {
-                OutlinedTextField(
-                    value = state.trim,
-                    onValueChange = { viewModel.updateTrim(it) },
-                    label = { Text("Trim (optional)") },
-                    modifier = Modifier.fillMaxWidth()
+                // Standard mode: Year / Make / Model / Trim
+                DropdownField(
+                    label = "Year",
+                    value = state.year.toString(),
+                    options = (2026 downTo 2015).map { it.toString() },
+                    onSelect = { viewModel.updateYear(it.toInt()) }
                 )
+
+                EditableDropdownField(
+                    label = "Make",
+                    value = state.make,
+                    options = state.availableMakes,
+                    onValueChange = { viewModel.updateMake(it) }
+                )
+
+                EditableDropdownField(
+                    label = "Model",
+                    value = state.model,
+                    options = state.availableModels,
+                    onValueChange = { viewModel.updateModel(it) }
+                )
+
+                if (state.availableTrims.isNotEmpty()) {
+                    EditableDropdownField(
+                        label = "Trim (optional)",
+                        value = state.trim,
+                        options = state.availableTrims,
+                        onValueChange = { viewModel.updateTrim(it) }
+                    )
+                } else {
+                    OutlinedTextField(
+                        value = state.trim,
+                        onValueChange = { viewModel.updateTrim(it) },
+                        label = { Text("Trim (optional)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
 
             // EV / Hybrid toggle

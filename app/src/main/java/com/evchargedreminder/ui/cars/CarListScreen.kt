@@ -1,5 +1,6 @@
 package com.evchargedreminder.ui.cars
 
+import com.evchargedreminder.domain.model.displayName
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -94,7 +95,7 @@ fun CarListScreen(
         AlertDialog(
             onDismissRequest = { carToDelete = null },
             title = { Text("Delete car?") },
-            text = { Text("Delete ${car.year} ${car.make} ${car.model}?") },
+            text = { Text("Delete ${car.displayName}?") },
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.deleteCar(car)
@@ -127,8 +128,8 @@ private fun CarCard(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = buildString {
-                        append("${car.year} ${car.make} ${car.model}")
-                        car.trim?.let { append(" $it") }
+                        append(car.displayName)
+                        if (car.model.isNotBlank()) car.trim?.let { append(" $it") }
                     },
                     style = MaterialTheme.typography.titleMedium
                 )

@@ -20,6 +20,7 @@ enum class OnboardingStep {
 
 data class OnboardingUiState(
     val step: OnboardingStep = OnboardingStep.WELCOME,
+    val isCustom: Boolean = false,
     val year: Int = 2024,
     val make: String = "",
     val model: String = "",
@@ -69,6 +70,21 @@ class OnboardingViewModel @Inject constructor(
                 OnboardingStep.DONE -> OnboardingStep.PERMISSIONS
             }
             it.copy(step = prev)
+        }
+    }
+
+    fun setCustomMode(custom: Boolean) {
+        _uiState.update {
+            it.copy(
+                isCustom = custom,
+                make = "",
+                model = "",
+                trim = "",
+                batteryCapacityKwh = "",
+                autoFilled = false,
+                availableModels = emptyList(),
+                availableTrims = emptyList()
+            )
         }
     }
 
@@ -139,8 +155,10 @@ class OnboardingViewModel @Inject constructor(
 
     fun saveCar() {
         val state = _uiState.value
-        if (state.make.isBlank() || state.model.isBlank()) {
-            _uiState.update { it.copy(error = "Make and model are required") }
+        val nameValid = if (state.isCustom) state.make.isNotBlank() else state.make.isNotBlank() && state.model.isNotBlank()
+        if (!nameValid) {
+            val msg = if (state.isCustom) "Car name is required" else "Make and model are required"
+            _uiState.update { it.copy(error = msg) }
             return
         }
         val capacity = state.batteryCapacityKwh.toDoubleOrNull()
@@ -154,8 +172,8 @@ class OnboardingViewModel @Inject constructor(
             val car = Car(
                 year = state.year,
                 make = state.make,
-                model = state.model,
-                trim = state.trim.ifBlank { null },
+                model = if (state.isCustom) "" else state.model,
+                trim = if (state.isCustom) null else state.trim.ifBlank { null },
                 isHybrid = state.isHybrid,
                 batteryCapacityKwh = capacity,
                 defaultStartPct = if (state.isHybrid) 0 else 20,
