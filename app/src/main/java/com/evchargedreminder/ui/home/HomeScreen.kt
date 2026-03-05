@@ -176,6 +176,8 @@ private fun NearbyChargersSection(
             isSuppressed = nearby.charger.id in state.suppressedChargerIds,
             hasActiveSession = state.activeSession != null,
             isStarting = state.isStartingSession,
+            autoStartCountdownSeconds = if (nearby.charger.id == state.autoStartChargerId)
+                state.autoStartCountdownSeconds else null,
             useImperial = useImperial,
             onStartSession = onStartSession,
             onSuppress = onSuppress,
@@ -190,6 +192,7 @@ private fun NearbyChargerCard(
     isSuppressed: Boolean,
     hasActiveSession: Boolean,
     isStarting: Boolean,
+    autoStartCountdownSeconds: Long?,
     useImperial: Boolean,
     onStartSession: (Long) -> Unit,
     onSuppress: (Long) -> Unit,
@@ -225,6 +228,16 @@ private fun NearbyChargerCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+            }
+
+            if (autoStartCountdownSeconds != null && autoStartCountdownSeconds > 0 && !isSuppressed) {
+                val minutes = autoStartCountdownSeconds / 60
+                val seconds = autoStartCountdownSeconds % 60
+                Text(
+                    text = "Auto-starting in ${minutes}m ${seconds}s",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
             }
 
             if (isSuppressed) {

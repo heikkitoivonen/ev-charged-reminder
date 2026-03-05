@@ -16,6 +16,7 @@ import com.evchargedreminder.domain.usecase.NearbyCharger
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import java.time.Instant
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -36,7 +37,9 @@ data class HomeUiState(
     val showOverrideControls: Boolean = false,
     val nearbyChargers: List<NearbyCharger> = emptyList(),
     val suppressedChargerIds: Set<Long> = emptySet(),
-    val isStartingSession: Boolean = false
+    val isStartingSession: Boolean = false,
+    val autoStartChargerId: Long? = null,
+    val autoStartCountdownSeconds: Long = 0
 )
 
 @HiltViewModel
@@ -53,9 +56,11 @@ class HomeViewModel @Inject constructor(
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
     private var refreshJob: Job? = null
+    private val nearbyFirstSeen = mutableMapOf<Long, Instant>()
 
     companion object {
         private const val REFRESH_INTERVAL_MS = 30_000L // 30 seconds
+        private const val AUTO_START_DWELL_SECONDS = 180L // 3 minutes
     }
 
     init {
@@ -76,6 +81,26 @@ class HomeViewModel @Inject constructor(
         val session = manageSession.getActiveSession()
         val nearby = try { detectUseCase.checkAllNearby() } catch (_: Exception) { emptyList() }
 
+        // Track first-seen times for nearby chargers
+        val now = Instant.now()
+        val currentNearbyIds = nearby.map { it.charger.id }.toSet()
+        nearbyFirstSeen.keys.retainAll(currentNearbyIds)
+        for (nc in nearby) {
+            nearbyFirstSeen.putIfAbsent(nc.charger.id, now)
+        }
+
+        // Compute auto-start countdown for closest unsuppressed charger (only when no active session)
+        val suppressedIds = _uiState.value.suppressedChargerIds
+        val autoStartTarget = if (session == null) {
+            nearby.firstOrNull { it.charger.id !in suppressedIds }
+        } else null
+        val autoStartChargerId = autoStartTarget?.charger?.id
+        val autoStartCountdown = if (autoStartTarget != null) {
+            val firstSeen = nearbyFirstSeen[autoStartTarget.charger.id] ?: now
+            val elapsed = java.time.Duration.between(firstSeen, now).seconds
+            (AUTO_START_DWELL_SECONDS - elapsed).coerceAtLeast(0)
+        } else 0L
+
         if (session == null) {
             _uiState.update {
                 it.copy(
@@ -85,7 +110,9 @@ class HomeViewModel @Inject constructor(
                     charger = null,
                     estimatedMinutesRemaining = 0,
                     progressPercent = 0f,
-                    nearbyChargers = nearby
+                    nearbyChargers = nearby,
+                    autoStartChargerId = autoStartChargerId,
+                    autoStartCountdownSeconds = autoStartCountdown
                 )
             }
             return
@@ -104,7 +131,9 @@ class HomeViewModel @Inject constructor(
                 charger = charger,
                 estimatedMinutesRemaining = minutesRemaining,
                 progressPercent = progress,
-                nearbyChargers = nearby
+                nearbyChargers = nearby,
+                autoStartChargerId = null,
+                autoStartCountdownSeconds = 0
             )
         }
     }
