@@ -193,6 +193,10 @@ class HomeViewModel @Inject constructor(
         return (elapsed.toFloat() / totalMinutes).coerceIn(0f, 1f)
     }
 
+    fun forceRefresh() {
+        viewModelScope.launch { refreshSession() }
+    }
+
     fun showOverrideControls(show: Boolean) {
         val session = _uiState.value.activeSession ?: return
         _uiState.update {
