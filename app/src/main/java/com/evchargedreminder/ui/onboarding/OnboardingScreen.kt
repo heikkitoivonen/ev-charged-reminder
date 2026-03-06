@@ -174,28 +174,28 @@ private fun AddCarStep(state: OnboardingUiState, viewModel: OnboardingViewModel)
             onSelect = { viewModel.updateYear(it.toInt()) }
         )
 
-        EditableDropdownField(
+        DropdownField(
             label = "Make",
             value = state.make,
             options = state.availableMakes,
-            onValueChange = { viewModel.updateMake(it) }
+            onSelect = { viewModel.updateMake(it) }
         )
 
         if (state.make.isNotBlank()) {
-            EditableDropdownField(
+            DropdownField(
                 label = "Model",
                 value = state.model,
                 options = state.availableModels,
-                onValueChange = { viewModel.updateModel(it) }
+                onSelect = { viewModel.updateModel(it) }
             )
         }
 
         if (state.availableTrims.isNotEmpty()) {
-            EditableDropdownField(
+            DropdownField(
                 label = "Trim",
                 value = state.trim,
                 options = state.availableTrims,
-                onValueChange = { viewModel.updateTrim(it) }
+                onSelect = { viewModel.updateTrim(it) }
             )
         }
     }
@@ -474,38 +474,3 @@ private fun DropdownField(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun EditableDropdownField(
-    label: String,
-    value: String,
-    options: List<String>,
-    onValueChange: (String) -> Unit
-) {
-    var expanded by remember { mutableStateOf(false) }
-    val filteredOptions = if (value.isBlank()) options
-    else options.filter { it.contains(value, ignoreCase = true) }
-
-    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
-        OutlinedTextField(
-            value = value,
-            onValueChange = { onValueChange(it); expanded = true },
-            label = { Text(label) },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
-            modifier = Modifier
-                .fillMaxWidth()
-                .menuAnchor(MenuAnchorType.PrimaryEditable),
-            singleLine = true
-        )
-        if (filteredOptions.isNotEmpty()) {
-            ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                filteredOptions.forEach { option ->
-                    DropdownMenuItem(
-                        text = { Text(option) },
-                        onClick = { onValueChange(option); expanded = false }
-                    )
-                }
-            }
-        }
-    }
-}

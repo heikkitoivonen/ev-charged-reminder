@@ -115,33 +115,26 @@ fun CarEditScreen(
                     onSelect = { viewModel.updateYear(it.toInt()) }
                 )
 
-                EditableDropdownField(
+                DropdownField(
                     label = "Make",
                     value = state.make,
                     options = state.availableMakes,
-                    onValueChange = { viewModel.updateMake(it) }
+                    onSelect = { viewModel.updateMake(it) }
                 )
 
-                EditableDropdownField(
+                DropdownField(
                     label = "Model",
                     value = state.model,
                     options = state.availableModels,
-                    onValueChange = { viewModel.updateModel(it) }
+                    onSelect = { viewModel.updateModel(it) }
                 )
 
                 if (state.availableTrims.isNotEmpty()) {
-                    EditableDropdownField(
+                    DropdownField(
                         label = "Trim (optional)",
                         value = state.trim,
                         options = state.availableTrims,
-                        onValueChange = { viewModel.updateTrim(it) }
-                    )
-                } else {
-                    OutlinedTextField(
-                        value = state.trim,
-                        onValueChange = { viewModel.updateTrim(it) },
-                        label = { Text("Trim (optional)") },
-                        modifier = Modifier.fillMaxWidth()
+                        onSelect = { viewModel.updateTrim(it) }
                     )
                 }
             }
@@ -252,47 +245,3 @@ private fun DropdownField(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun EditableDropdownField(
-    label: String,
-    value: String,
-    options: List<String>,
-    onValueChange: (String) -> Unit
-) {
-    var expanded by remember { mutableStateOf(false) }
-    val filteredOptions = if (value.isBlank()) options
-        else options.filter { it.contains(value, ignoreCase = true) }
-
-    ExposedDropdownMenuBox(
-        expanded = expanded && filteredOptions.isNotEmpty(),
-        onExpandedChange = { expanded = it }
-    ) {
-        OutlinedTextField(
-            value = value,
-            onValueChange = {
-                onValueChange(it)
-                expanded = true
-            },
-            label = { Text(label) },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryEditable)
-        )
-        if (filteredOptions.isNotEmpty()) {
-            ExposedDropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false }
-            ) {
-                filteredOptions.forEach { option ->
-                    DropdownMenuItem(
-                        text = { Text(option) },
-                        onClick = {
-                            onValueChange(option)
-                            expanded = false
-                        }
-                    )
-                }
-            }
-        }
-    }
-}
