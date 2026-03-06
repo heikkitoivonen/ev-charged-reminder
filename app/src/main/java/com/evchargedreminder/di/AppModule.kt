@@ -8,6 +8,8 @@ import com.evchargedreminder.data.repository.ChargerRepository
 import com.evchargedreminder.data.repository.ChargerRepositoryImpl
 import com.evchargedreminder.data.repository.ChargingSessionRepository
 import com.evchargedreminder.data.repository.ChargingSessionRepositoryImpl
+import com.evchargedreminder.service.SessionServiceLauncher
+import com.evchargedreminder.service.SessionServiceLauncherImpl
 import com.evchargedreminder.util.FusedLocationProvider
 import com.evchargedreminder.util.LocationProvider
 import dagger.Binds
@@ -35,4 +37,7 @@ abstract class AppModule {
 
     @Binds
     abstract fun bindOnboardingPreferences(impl: OnboardingPreferencesImpl): OnboardingPreferences
+
+    @Binds
+    abstract fun bindSessionServiceLauncher(impl: SessionServiceLauncherImpl): SessionServiceLauncher
 }

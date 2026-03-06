@@ -27,6 +27,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import com.evchargedreminder.service.SessionServiceLauncher
 import org.junit.Before
 import org.junit.Test
 import java.time.Instant
@@ -43,6 +44,7 @@ class HomeViewModelTest {
     private lateinit var fakeLocationProvider: FakeLocationProvider
     private lateinit var detectUseCase: DetectChargingSessionUseCase
     private lateinit var nearbyTracker: NearbyChargerTracker
+    private lateinit var fakeServiceLauncher: FakeSessionServiceLauncher
 
     @Before
     fun setup() {
@@ -52,6 +54,7 @@ class HomeViewModelTest {
         fakeSessionRepo = FakeHomeSessionRepo()
         fakeLocationProvider = FakeLocationProvider()
         nearbyTracker = NearbyChargerTracker()
+        fakeServiceLauncher = FakeSessionServiceLauncher()
         manageSession = ManageSessionUseCase(fakeSessionRepo, fakeChargerRepo, fakeCarRepo)
         estimateUseCase = EstimateChargingTimeUseCase(fakeCarRepo, fakeChargerRepo)
         detectUseCase = DetectChargingSessionUseCase(
@@ -67,7 +70,7 @@ class HomeViewModelTest {
     private fun createViewModel(): HomeViewModel {
         return HomeViewModel(
             manageSession, fakeCarRepo, fakeChargerRepo, fakeSessionRepo, estimateUseCase,
-            detectUseCase, nearbyTracker
+            detectUseCase, nearbyTracker, fakeServiceLauncher
         )
     }
 
@@ -350,6 +353,13 @@ private class FakeHomeChargerRepo : ChargerRepository {
 private class FakeLocationProvider : LocationProvider {
     var location: Pair<Double, Double>? = null
     override suspend fun getCurrentLocation(): Pair<Double, Double>? = location
+}
+
+private class FakeSessionServiceLauncher : SessionServiceLauncher {
+    var lastStartedSessionId: Long? = null
+    override fun startSession(sessionId: Long) {
+        lastStartedSessionId = sessionId
+    }
 }
 
 private class FakeHomeSessionRepo : ChargingSessionRepository {

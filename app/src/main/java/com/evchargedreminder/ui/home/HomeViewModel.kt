@@ -13,6 +13,7 @@ import com.evchargedreminder.domain.usecase.DetectChargingSessionUseCase
 import com.evchargedreminder.domain.usecase.EstimateChargingTimeUseCase
 import com.evchargedreminder.domain.usecase.ManageSessionUseCase
 import com.evchargedreminder.domain.usecase.NearbyCharger
+import com.evchargedreminder.service.SessionServiceLauncher
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -51,7 +52,8 @@ class HomeViewModel @Inject constructor(
     private val chargingSessionRepository: ChargingSessionRepository,
     private val estimateUseCase: EstimateChargingTimeUseCase,
     private val detectUseCase: DetectChargingSessionUseCase,
-    private val nearbyTracker: NearbyChargerTracker
+    private val nearbyTracker: NearbyChargerTracker,
+    private val sessionServiceLauncher: SessionServiceLauncher
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -92,7 +94,7 @@ class HomeViewModel @Inject constructor(
 
     private fun updateCountdown() {
         val state = _uiState.value
-        if (state.activeSession != null || state.nearbyChargers.isEmpty()) return
+        if (state.activeSession != null || state.nearbyChargers.isEmpty() || state.isStartingSession) return
 
         val target = state.nearbyChargers.firstOrNull { it.charger.id !in state.suppressedChargerIds }
             ?: return
@@ -105,6 +107,10 @@ class HomeViewModel @Inject constructor(
                 autoStartChargerId = target.charger.id,
                 autoStartCountdownSeconds = countdown
             )
+        }
+
+        if (countdown == 0L) {
+            startSessionWithService(target.charger)
         }
     }
 
@@ -230,9 +236,16 @@ class HomeViewModel @Inject constructor(
     fun manualStartSession(chargerId: Long) {
         val charger = _uiState.value.nearbyChargers.find { it.charger.id == chargerId }?.charger
             ?: return
+        startSessionWithService(charger)
+    }
+
+    private fun startSessionWithService(charger: Charger) {
         _uiState.update { it.copy(isStartingSession = true) }
         viewModelScope.launch {
-            detectUseCase.startSession(charger)
+            val session = detectUseCase.startSession(charger)
+            if (session != null) {
+                sessionServiceLauncher.startSession(session.id)
+            }
             _uiState.update { it.copy(isStartingSession = false) }
             refreshSession()
         }
