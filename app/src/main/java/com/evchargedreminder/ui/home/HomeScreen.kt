@@ -29,6 +29,11 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -93,7 +98,10 @@ fun HomeScreen(
                         onTargetPctChange = { viewModel.updateEditTargetPct(it) },
                         onApplyOverride = { viewModel.applyOverride() },
                         onCancelEdit = { viewModel.cancelEditing() },
-                        onEndSession = { viewModel.endSession() }
+                        onEndSession = { viewModel.endSession() },
+                        onShowCarPicker = { viewModel.showCarPicker(true) },
+                        onDismissCarPicker = { viewModel.showCarPicker(false) },
+                        onChangeCar = { viewModel.changeSessionCar(it) }
                     )
                     NearbyChargersSection(
                         state = state,
@@ -288,6 +296,7 @@ private fun NearbyChargerCard(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ChargingActiveContent(
     state: HomeUiState,
@@ -296,7 +305,10 @@ private fun ChargingActiveContent(
     onTargetPctChange: (Int) -> Unit,
     onApplyOverride: () -> Unit,
     onCancelEdit: () -> Unit,
-    onEndSession: () -> Unit
+    onEndSession: () -> Unit,
+    onShowCarPicker: () -> Unit,
+    onDismissCarPicker: () -> Unit,
+    onChangeCar: (Long) -> Unit
 ) {
     val session = state.activeSession ?: return
     val chargerName = state.charger?.name ?: "Unknown charger"
@@ -319,11 +331,41 @@ private fun ChargingActiveContent(
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onPrimaryContainer
             )
-            Text(
-                text = carName,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-            )
+            if (state.allCars.size > 1) {
+                ExposedDropdownMenuBox(
+                    expanded = state.isEditingCar,
+                    onExpandedChange = { if (it) onShowCarPicker() else onDismissCarPicker() }
+                ) {
+                    OutlinedTextField(
+                        value = carName,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Car") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = state.isEditingCar) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(MenuAnchorType.PrimaryNotEditable),
+                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = state.isEditingCar,
+                        onDismissRequest = { onDismissCarPicker() }
+                    ) {
+                        state.allCars.forEach { car ->
+                            DropdownMenuItem(
+                                text = { Text(car.displayName) },
+                                onClick = { onChangeCar(car.id) }
+                            )
+                        }
+                    }
+                }
+            } else {
+                Text(
+                    text = carName,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                )
+            }
         }
     }
 

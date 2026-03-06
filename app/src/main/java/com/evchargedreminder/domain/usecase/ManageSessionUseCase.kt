@@ -105,6 +105,31 @@ class ManageSessionUseCase @Inject constructor(
     }
 
     /**
+     * Changes the car linked to a session and recalculates the estimated end time.
+     */
+    suspend fun changeSessionCar(sessionId: Long, newCarId: Long) {
+        val session = chargingSessionRepository.getById(sessionId) ?: return
+        val car = carRepository.getById(newCarId) ?: return
+        val charger = chargerRepository.getById(session.chargerId) ?: return
+
+        val totalMinutes = ChargingCurve.estimateChargingTimeMinutes(
+            batteryCapacityKwh = car.batteryCapacityKwh,
+            startPct = session.startPct,
+            targetPct = session.targetPct,
+            chargingSpeedKw = charger.maxChargingSpeedKw,
+            isAc = charger.chargerType.isAc,
+            maxAcceptRateKw = car.maxAcceptRateKw
+        )
+
+        chargingSessionRepository.update(
+            session.copy(
+                carId = newCarId,
+                estimatedEndAt = session.startedAt.plusSeconds(totalMinutes * 60)
+            )
+        )
+    }
+
+    /**
      * Recalculates the estimated end time for an active session.
      * Optionally updates start/target percentages if overridden by the user.
      * The new estimatedEndAt is computed from startedAt + full charge duration.

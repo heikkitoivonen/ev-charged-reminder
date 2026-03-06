@@ -18,6 +18,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import java.time.Instant
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -31,6 +32,8 @@ data class HomeUiState(
     val activeSession: ChargingSession? = null,
     val car: Car? = null,
     val charger: Charger? = null,
+    val allCars: List<Car> = emptyList(),
+    val isEditingCar: Boolean = false,
     val estimatedMinutesRemaining: Long = 0,
     val progressPercent: Float = 0f,
     val isEditing: Boolean = false,
@@ -152,6 +155,7 @@ class HomeViewModel @Inject constructor(
 
         val car = carRepository.getById(session.carId)
         val charger = chargerRepository.getById(session.chargerId)
+        val allCars = carRepository.getAll().first()
         val minutesRemaining = manageSession.getEstimatedMinutesRemaining(session)
         val progress = calculateProgress(session, minutesRemaining, car)
 
@@ -161,6 +165,7 @@ class HomeViewModel @Inject constructor(
                 activeSession = session,
                 car = car,
                 charger = charger,
+                allCars = allCars,
                 estimatedMinutesRemaining = minutesRemaining,
                 progressPercent = progress,
                 nearbyChargers = nearby,
@@ -249,6 +254,19 @@ class HomeViewModel @Inject constructor(
             }
             refreshSession()
             _uiState.update { it.copy(isStartingSession = false) }
+        }
+    }
+
+    fun showCarPicker(show: Boolean) {
+        _uiState.update { it.copy(isEditingCar = show) }
+    }
+
+    fun changeSessionCar(carId: Long) {
+        val session = _uiState.value.activeSession ?: return
+        viewModelScope.launch {
+            manageSession.changeSessionCar(session.id, carId)
+            _uiState.update { it.copy(isEditingCar = false) }
+            refreshSession()
         }
     }
 
