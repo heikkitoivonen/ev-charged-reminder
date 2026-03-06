@@ -23,7 +23,7 @@ class DwellCheckWorker @AssistedInject constructor(
     companion object {
         const val KEY_CHARGER_ID = "charger_id"
         const val KEY_DWELL_COUNT = "dwell_count"
-        private const val DWELL_THRESHOLD = 2
+        private const val DWELL_THRESHOLD = 3
     }
 
     override suspend fun doWork(): Result {

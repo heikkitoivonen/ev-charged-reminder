@@ -26,6 +26,7 @@ import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.CopyrightOverlay
 import org.osmdroid.views.overlay.Marker
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -83,6 +84,7 @@ fun MapPickerScreen(
                         setMultiTouchControls(true)
                         controller.setZoom(15.0)
                         controller.setCenter(GeoPoint(selectedLat, selectedLng))
+                        overlays.add(CopyrightOverlay(context))
 
                         val marker = Marker(this).apply {
                             position = GeoPoint(selectedLat, selectedLng)

@@ -78,7 +78,7 @@ class DetectChargingSessionUseCaseTest {
         val id = fakeChargerRepo.insert(charger)
         val savedCharger = fakeChargerRepo.getById(id)!!
 
-        assertTrue(useCase.shouldStartSession(savedCharger, 2))
+        assertTrue(useCase.shouldStartSession(savedCharger, 3))
     }
 
     @Test
@@ -87,7 +87,7 @@ class DetectChargingSessionUseCaseTest {
         val id = fakeChargerRepo.insert(charger)
         val savedCharger = fakeChargerRepo.getById(id)!!
 
-        assertEquals(false, useCase.shouldStartSession(savedCharger, 1))
+        assertEquals(false, useCase.shouldStartSession(savedCharger, 2))
     }
 
     @Test
