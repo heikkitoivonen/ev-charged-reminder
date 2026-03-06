@@ -149,6 +149,124 @@ class DetectChargingSessionUseCaseTest {
     }
 
     @Test
+    fun `startSession returns null during cooldown after manual stop`() = runTest {
+        val car = Car(
+            year = 2024, make = "Tesla", model = "Model 3",
+            batteryCapacityKwh = 75.0, isFavorite = true
+        )
+        fakeCarRepo.insertAndSetFavorite(car)
+
+        val charger = testCharger()
+        val chargerId = fakeChargerRepo.insert(charger)
+        val savedCharger = fakeChargerRepo.getById(chargerId)!!
+
+        // Insert a recently ended session (manual stop)
+        fakeSessionRepo.insert(
+            ChargingSession(
+                carId = 1, chargerId = chargerId,
+                startPct = 20, targetPct = 80,
+                startedAt = Instant.now().minusSeconds(3600),
+                estimatedEndAt = Instant.now().minusSeconds(600),
+                actualEndAt = Instant.now().minusSeconds(60), // ended 1 minute ago
+                endReason = SessionEndReason.MANUAL
+            )
+        )
+
+        assertNull(useCase.startSession(savedCharger))
+    }
+
+    @Test
+    fun `startSession returns null during cooldown after target reached`() = runTest {
+        val car = Car(
+            year = 2024, make = "Tesla", model = "Model 3",
+            batteryCapacityKwh = 75.0, isFavorite = true
+        )
+        fakeCarRepo.insertAndSetFavorite(car)
+
+        val charger = testCharger()
+        val chargerId = fakeChargerRepo.insert(charger)
+        val savedCharger = fakeChargerRepo.getById(chargerId)!!
+
+        // Insert a recently ended session (target reached)
+        fakeSessionRepo.insert(
+            ChargingSession(
+                carId = 1, chargerId = chargerId,
+                startPct = 20, targetPct = 80,
+                startedAt = Instant.now().minusSeconds(3600),
+                estimatedEndAt = Instant.now().minusSeconds(60),
+                actualEndAt = Instant.now().minusSeconds(60),
+                endReason = SessionEndReason.TARGET_REACHED
+            )
+        )
+
+        assertNull(useCase.startSession(savedCharger))
+    }
+
+    @Test
+    fun `startSession allowed after cooldown period expires`() = runTest {
+        val car = Car(
+            year = 2024, make = "Tesla", model = "Model 3",
+            batteryCapacityKwh = 75.0, isFavorite = true
+        )
+        fakeCarRepo.insertAndSetFavorite(car)
+
+        val charger = testCharger()
+        val chargerId = fakeChargerRepo.insert(charger)
+        val savedCharger = fakeChargerRepo.getById(chargerId)!!
+
+        // Insert a session that ended 20 minutes ago (past cooldown)
+        fakeSessionRepo.insert(
+            ChargingSession(
+                carId = 1, chargerId = chargerId,
+                startPct = 20, targetPct = 80,
+                startedAt = Instant.now().minusSeconds(7200),
+                estimatedEndAt = Instant.now().minusSeconds(3600),
+                actualEndAt = Instant.now().minusSeconds(1200), // 20 minutes ago
+                endReason = SessionEndReason.MANUAL
+            )
+        )
+
+        assertNotNull(useCase.startSession(savedCharger))
+    }
+
+    @Test
+    fun `startSession returns null when battery is full`() = runTest {
+        val car = Car(
+            year = 2024, make = "Tesla", model = "Model 3",
+            batteryCapacityKwh = 75.0, isFavorite = true,
+            defaultStartPct = 80, defaultTargetPct = 80
+        )
+        fakeCarRepo.insertAndSetFavorite(car)
+
+        val charger = testCharger()
+        val chargerId = fakeChargerRepo.insert(charger)
+        val savedCharger = fakeChargerRepo.getById(chargerId)!!
+
+        assertNull(useCase.startSession(savedCharger))
+    }
+
+    @Test
+    fun `shouldStartSession returns false during cooldown`() = runTest {
+        val charger = testCharger()
+        val chargerId = fakeChargerRepo.insert(charger)
+        val savedCharger = fakeChargerRepo.getById(chargerId)!!
+
+        // Insert a recently ended session
+        fakeSessionRepo.insert(
+            ChargingSession(
+                carId = 1, chargerId = chargerId,
+                startPct = 20, targetPct = 80,
+                startedAt = Instant.now().minusSeconds(3600),
+                estimatedEndAt = Instant.now().minusSeconds(600),
+                actualEndAt = Instant.now().minusSeconds(60),
+                endReason = SessionEndReason.MANUAL
+            )
+        )
+
+        assertEquals(false, useCase.shouldStartSession(savedCharger, 5))
+    }
+
+    @Test
     fun `startSession returns null when no favorite car`() = runTest {
         val charger = testCharger()
         val chargerId = fakeChargerRepo.insert(charger)

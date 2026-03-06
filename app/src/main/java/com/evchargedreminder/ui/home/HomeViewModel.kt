@@ -229,6 +229,7 @@ class HomeViewModel @Inject constructor(
         val session = _uiState.value.activeSession ?: return
         viewModelScope.launch {
             manageSession.endSession(session.id, SessionEndReason.MANUAL)
+            nearbyTracker.clear()
             refreshSession()
         }
     }
