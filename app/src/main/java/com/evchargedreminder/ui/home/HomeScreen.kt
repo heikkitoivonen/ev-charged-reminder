@@ -258,6 +258,11 @@ private fun NearbyChargerCard(
             }
 
             if (isSuppressed && !hasActiveSession) {
+                Text(
+                    text = "Auto-start paused for 15 minutes after last session ended.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 Button(
                     onClick = { onStartSession(charger.id) },
                     enabled = !isStarting,
