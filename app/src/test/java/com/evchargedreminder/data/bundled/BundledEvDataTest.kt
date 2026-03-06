@@ -36,7 +36,10 @@ class BundledEvDataTest {
 
     @Test
     fun `hybrid vehicles are marked as hybrid`() {
-        val expectedHybrids = listOf("Prius Prime", "Volt", "i3 REx", "Tucson PHEV", "Wrangler 4xe")
+        val expectedHybrids = listOf(
+            "Prius Prime", "RAV4 Prime", "Volt", "i3 REx", "Tucson PHEV",
+            "Wrangler 4xe", "Pacifica Hybrid", "Outlander PHEV", "Sportage PHEV", "Escape PHEV"
+        )
         expectedHybrids.forEach { model ->
             val found = BundledEvData.vehicles.find { it.model == model }
             assertTrue("$model should be in bundled data", found != null)
@@ -78,7 +81,7 @@ class BundledEvDataTest {
     @Test
     fun `findByMake returns all vehicles for a make`() {
         val hyundais = BundledEvData.findByMake("Hyundai")
-        assertEquals(3, hyundais.size)
+        assertEquals(4, hyundais.size)
     }
 
     @Test
@@ -99,6 +102,6 @@ class BundledEvDataTest {
 
     @Test
     fun `vehicle count matches expected`() {
-        assertEquals(25, BundledEvData.vehicles.size)
+        assertEquals(54, BundledEvData.vehicles.size)
     }
 }
