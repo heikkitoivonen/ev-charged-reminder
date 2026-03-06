@@ -3,8 +3,9 @@
 ## Build & Commit Rules
 - **Unit tests must be run and pass before every git commit.** No exceptions.
 - Run tests with `./gradlew test` from the project root.
-- AI agents must add a `Co-Authored-By` trailer to the commit message, e.g.:
-  `Co-Authored-By: Amp <amp@ampcode.com>`
+- AI agents must add a `Co-Authored-By` trailer to the commit message using the agent's own identity, e.g.:
+  - Claude: `Co-Authored-By: Claude <noreply@anthropic.com>`
+  - Amp: `Co-Authored-By: Amp <amp@ampcode.com>`
 
 ## Project Intent
 - This is a **free, open-source** app (MIT License).
