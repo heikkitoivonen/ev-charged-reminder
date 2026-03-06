@@ -52,7 +52,7 @@ import com.evchargedreminder.domain.model.ChargerType
 @Composable
 fun ChargerEditScreen(
     onNavigateBack: () -> Unit,
-    onPickOnMap: (Double, Double) -> Unit,
+    onPickOnMap: (Double, Double, Int) -> Unit,
     mapPickerLat: Double = Double.NaN,
     mapPickerLng: Double = Double.NaN,
     onMapResultConsumed: () -> Unit = {},
@@ -158,7 +158,7 @@ fun ChargerEditScreen(
                         onClick = {
                             val lat = state.latitude.toDoubleOrNull() ?: 0.0
                             val lng = state.longitude.toDoubleOrNull() ?: 0.0
-                            onPickOnMap(lat, lng)
+                            onPickOnMap(lat, lng, state.radiusMeters)
                         },
                         modifier = Modifier.weight(1f)
                     ) {
@@ -174,7 +174,7 @@ fun ChargerEditScreen(
                         onClick = {
                             val lat = state.latitude.toDoubleOrNull() ?: 0.0
                             val lng = state.longitude.toDoubleOrNull() ?: 0.0
-                            onPickOnMap(lat, lng)
+                            onPickOnMap(lat, lng, state.radiusMeters)
                         },
                         modifier = Modifier.weight(1f)
                     ) {

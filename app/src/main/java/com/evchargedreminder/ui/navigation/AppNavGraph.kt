@@ -42,7 +42,7 @@ import kotlinx.serialization.Serializable
 @Serializable data class CarEditRoute(val carId: Long = -1L)
 @Serializable object ChargerListRoute
 @Serializable data class ChargerEditRoute(val chargerId: Long = -1L)
-@Serializable data class MapPickerRoute(val initialLat: Double = 0.0, val initialLng: Double = 0.0)
+@Serializable data class MapPickerRoute(val initialLat: Double = 0.0, val initialLng: Double = 0.0, val radiusMeters: Int = 100)
 @Serializable object HistoryRoute
 @Serializable object SettingsRoute
 @Serializable object LicenseRoute
@@ -145,8 +145,8 @@ fun AppNavHost(showOverride: Boolean = false, onboardingCompleted: Boolean = tru
 
                 ChargerEditScreen(
                     onNavigateBack = { navController.popBackStack() },
-                    onPickOnMap = { lat, lng ->
-                        navController.navigate(MapPickerRoute(lat, lng))
+                    onPickOnMap = { lat, lng, radius ->
+                        navController.navigate(MapPickerRoute(lat, lng, radius))
                     },
                     mapPickerLat = mapLat.value,
                     mapPickerLng = mapLng.value,
@@ -161,6 +161,7 @@ fun AppNavHost(showOverride: Boolean = false, onboardingCompleted: Boolean = tru
                 MapPickerScreen(
                     initialLat = route.initialLat,
                     initialLng = route.initialLng,
+                    radiusMeters = route.radiusMeters,
                     onLocationSelected = { lat, lng ->
                         navController.previousBackStackEntry?.savedStateHandle?.set("map_lat", lat)
                         navController.previousBackStackEntry?.savedStateHandle?.set("map_lng", lng)

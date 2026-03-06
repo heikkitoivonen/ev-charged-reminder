@@ -1,5 +1,6 @@
 package com.evchargedreminder.ui.chargers
 
+import android.graphics.Color
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -28,12 +29,14 @@ import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.CopyrightOverlay
 import org.osmdroid.views.overlay.Marker
+import org.osmdroid.views.overlay.Polygon
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MapPickerScreen(
     initialLat: Double,
     initialLng: Double,
+    radiusMeters: Int = 100,
     onLocationSelected: (Double, Double) -> Unit,
     onNavigateBack: () -> Unit
 ) {
@@ -86,16 +89,8 @@ fun MapPickerScreen(
                         controller.setCenter(GeoPoint(selectedLat, selectedLng))
                         overlays.add(CopyrightOverlay(context))
 
-                        val marker = Marker(this).apply {
-                            position = GeoPoint(selectedLat, selectedLng)
-                            setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                            title = "Charger location"
-                            if (hasSelection) {
-                                // Show marker at initial position
-                            }
-                        }
                         if (hasSelection) {
-                            overlays.add(marker)
+                            addMarkerAndCircle(this, GeoPoint(selectedLat, selectedLng), radiusMeters)
                         }
 
                         val mapViewRef = this
@@ -113,14 +108,9 @@ fun MapPickerScreen(
                                 selectedLng = geoPoint.longitude
                                 hasSelection = true
 
-                                // Update marker
-                                mapViewRef.overlays.removeAll { it is Marker }
-                                val newMarker = Marker(mapViewRef).apply {
-                                    position = geoPoint
-                                    setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                                    title = "Charger location"
-                                }
-                                mapViewRef.overlays.add(newMarker)
+                                // Update marker and circle
+                                mapViewRef.overlays.removeAll { it is Marker || it is Polygon }
+                                addMarkerAndCircle(mapViewRef, geoPoint, radiusMeters)
                                 mapViewRef.invalidate()
                                 return true
                             }
@@ -131,4 +121,21 @@ fun MapPickerScreen(
             )
         }
     }
+}
+
+private fun addMarkerAndCircle(mapView: MapView, position: GeoPoint, radiusMeters: Int) {
+    val circle = Polygon(mapView).apply {
+        points = Polygon.pointsAsCircle(position, radiusMeters.toDouble())
+        fillPaint.color = Color.argb(40, 33, 150, 243) // semi-transparent blue
+        outlinePaint.color = Color.argb(180, 33, 150, 243) // blue outline
+        outlinePaint.strokeWidth = 3f
+    }
+    mapView.overlays.add(circle)
+
+    val marker = Marker(mapView).apply {
+        this.position = position
+        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+        title = "Charger location"
+    }
+    mapView.overlays.add(marker)
 }
