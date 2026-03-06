@@ -128,6 +128,27 @@ class DetectChargingSessionUseCaseTest {
     }
 
     @Test
+    fun `startSession returns null when active session already exists for charger`() = runTest {
+        val car = Car(
+            year = 2024, make = "Tesla", model = "Model 3",
+            batteryCapacityKwh = 75.0, isFavorite = true
+        )
+        fakeCarRepo.insertAndSetFavorite(car)
+
+        val charger = testCharger()
+        val chargerId = fakeChargerRepo.insert(charger)
+        val savedCharger = fakeChargerRepo.getById(chargerId)!!
+
+        // First session should succeed
+        val session1 = useCase.startSession(savedCharger)
+        assertNotNull(session1)
+
+        // Second session for same charger should be rejected
+        val session2 = useCase.startSession(savedCharger)
+        assertNull(session2)
+    }
+
+    @Test
     fun `startSession returns null when no favorite car`() = runTest {
         val charger = testCharger()
         val chargerId = fakeChargerRepo.insert(charger)

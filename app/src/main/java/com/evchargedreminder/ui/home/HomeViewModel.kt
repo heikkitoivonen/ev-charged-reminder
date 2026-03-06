@@ -246,8 +246,8 @@ class HomeViewModel @Inject constructor(
             if (session != null) {
                 sessionServiceLauncher.startSession(session.id)
             }
-            _uiState.update { it.copy(isStartingSession = false) }
             refreshSession()
+            _uiState.update { it.copy(isStartingSession = false) }
         }
     }
 

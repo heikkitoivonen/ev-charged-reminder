@@ -95,6 +95,9 @@ class DetectChargingSessionUseCase @Inject constructor(
      * Returns null if no favorite car is set.
      */
     suspend fun startSession(charger: Charger): ChargingSession? {
+        val activeSessions = chargingSessionRepository.getActiveSessions()
+        if (activeSessions.any { it.chargerId == charger.id }) return null
+
         val car = carRepository.getFavorite() ?: return null
 
         val estimatedMinutes = ChargingCurve.estimateChargingTimeMinutes(
