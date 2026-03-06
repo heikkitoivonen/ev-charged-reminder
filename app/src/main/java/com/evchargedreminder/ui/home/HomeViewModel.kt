@@ -251,6 +251,10 @@ class HomeViewModel @Inject constructor(
             val session = detectUseCase.startSession(charger)
             if (session != null) {
                 sessionServiceLauncher.startSession(session.id)
+            } else {
+                // Session failed to start (cooldown, no car, etc.) — suppress
+                // auto-start to prevent retry loop
+                suppressAutoStart(charger.id)
             }
             refreshSession()
             _uiState.update { it.copy(isStartingSession = false) }
