@@ -14,6 +14,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -45,6 +46,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 @Composable
 fun HomeScreen(
     showOverride: Boolean = false,
+    onNavigateToSettings: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -57,7 +59,14 @@ fun HomeScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("EV Charged Reminder") })
+            TopAppBar(
+                title = { Text("EV Charged Reminder") },
+                actions = {
+                    IconButton(onClick = onNavigateToSettings) {
+                        Icon(Icons.Default.Settings, contentDescription = "Settings")
+                    }
+                }
+            )
         }
     ) { innerPadding ->
         Column(

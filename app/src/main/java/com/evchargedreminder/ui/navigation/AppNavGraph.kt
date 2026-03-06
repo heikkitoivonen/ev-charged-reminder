@@ -32,6 +32,8 @@ import com.evchargedreminder.ui.chargers.MapPickerScreen
 import com.evchargedreminder.ui.history.HistoryScreen
 import com.evchargedreminder.ui.home.HomeScreen
 import com.evchargedreminder.ui.onboarding.OnboardingScreen
+import com.evchargedreminder.ui.settings.LicenseScreen
+import com.evchargedreminder.ui.settings.SettingsScreen
 import kotlinx.serialization.Serializable
 
 @Serializable object OnboardingRoute
@@ -42,6 +44,8 @@ import kotlinx.serialization.Serializable
 @Serializable data class ChargerEditRoute(val chargerId: Long = -1L)
 @Serializable data class MapPickerRoute(val initialLat: Double = 0.0, val initialLng: Double = 0.0)
 @Serializable object HistoryRoute
+@Serializable object SettingsRoute
+@Serializable object LicenseRoute
 
 data class BottomNavItem(
     val label: String,
@@ -109,7 +113,10 @@ fun AppNavHost(showOverride: Boolean = false, onboardingCompleted: Boolean = tru
                 )
             }
             composable<HomeRoute> {
-                HomeScreen(showOverride = showOverride)
+                HomeScreen(
+                    showOverride = showOverride,
+                    onNavigateToSettings = { navController.navigate(SettingsRoute) }
+                )
             }
             composable<CarListRoute> {
                 CarListScreen(
@@ -164,6 +171,15 @@ fun AppNavHost(showOverride: Boolean = false, onboardingCompleted: Boolean = tru
             }
             composable<HistoryRoute> {
                 HistoryScreen()
+            }
+            composable<SettingsRoute> {
+                SettingsScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                    onViewLicense = { navController.navigate(LicenseRoute) }
+                )
+            }
+            composable<LicenseRoute> {
+                LicenseScreen(onNavigateBack = { navController.popBackStack() })
             }
         }
     }
