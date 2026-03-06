@@ -242,17 +242,17 @@ class HomeViewModel @Inject constructor(
     fun manualStartSession(chargerId: Long) {
         val charger = _uiState.value.nearbyChargers.find { it.charger.id == chargerId }?.charger
             ?: return
-        startSessionWithService(charger)
+        startSessionWithService(charger, skipCooldown = true)
     }
 
-    private fun startSessionWithService(charger: Charger) {
+    private fun startSessionWithService(charger: Charger, skipCooldown: Boolean = false) {
         _uiState.update { it.copy(isStartingSession = true) }
         viewModelScope.launch {
-            val session = detectUseCase.startSession(charger)
+            val session = detectUseCase.startSession(charger, skipCooldown = skipCooldown)
             if (session != null) {
                 sessionServiceLauncher.startSession(session.id)
-            } else {
-                // Session failed to start (cooldown, no car, etc.) — suppress
+            } else if (!skipCooldown) {
+                // Auto-start failed (cooldown, no car, etc.) — suppress
                 // auto-start to prevent retry loop
                 suppressAutoStart(charger.id)
             }

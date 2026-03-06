@@ -102,10 +102,10 @@ class DetectChargingSessionUseCase @Inject constructor(
      * Returns null if no favorite car is set, an active session already exists,
      * the charger is in cooldown, or the battery is already full.
      */
-    suspend fun startSession(charger: Charger): ChargingSession? {
+    suspend fun startSession(charger: Charger, skipCooldown: Boolean = false): ChargingSession? {
         val activeSessions = chargingSessionRepository.getActiveSessions()
         if (activeSessions.any { it.chargerId == charger.id }) return null
-        if (isInCooldownPeriod(charger.id)) return null
+        if (!skipCooldown && isInCooldownPeriod(charger.id)) return null
 
         val car = carRepository.getFavorite() ?: return null
         if (car.defaultStartPct >= car.defaultTargetPct) return null

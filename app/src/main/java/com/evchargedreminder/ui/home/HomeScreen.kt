@@ -257,20 +257,13 @@ private fun NearbyChargerCard(
                 )
             }
 
-            if (isSuppressed) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+            if (isSuppressed && !hasActiveSession) {
+                Button(
+                    onClick = { onStartSession(charger.id) },
+                    enabled = !isStarting,
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(
-                        text = "Auto-start suppressed",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    TextButton(onClick = { onUnsuppress(charger.id) }) {
-                        Text("Undo")
-                    }
+                    Text("Start Charging Anyway")
                 }
             } else if (!hasActiveSession) {
                 Row(
