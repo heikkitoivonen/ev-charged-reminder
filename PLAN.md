@@ -152,16 +152,16 @@ foreground service only when a charging session is active or likely.
 #### Tier 1 — Passive Monitoring (no foreground service)
 - Use **Geofencing API** to register geofences (100 m radius) around all saved charger locations.
 - When a geofence ENTER event fires, start a **short-lived WorkManager task** to confirm
-  proximity and begin the 3-minute dwell timer.
+  proximity and begin the 2-minute dwell timer.
 - Additionally, use **periodic WorkManager** (every 15 min) as a heartbeat to re-register
   geofences if needed (geofences can be lost on reboot / Play Services update).
 - No persistent notification — completely invisible to the user.
 
 #### Tier 2 — Active Session (foreground service)
-- When the user has been within a charger geofence for **≥ 3 minutes** (confirmed by
+- When the user has been within a charger geofence for **≥ 2 minutes** (confirmed by
   location checks), promote to a **foreground service** with a notification showing
   charging status, progress, and ETA.
-- The foreground service polls location at **1-minute intervals** for accurate session
+- The foreground service polls location at **40-second intervals** for accurate session
   tracking and auto-end detection.
 - The foreground service stops (drops back to Tier 1) when the session ends.
 
@@ -170,23 +170,23 @@ foreground service only when a charging session is active or likely.
 |---|---|---|
 | Outside all geofences | No polling | Geofence API triggers on entry |
 | Entered geofence, dwell timer running | 1 minute | WorkManager / short alarm |
-| Session active (Tier 2) | 1 minute | Foreground service |
+| Session active (Tier 2) | 40 seconds | Foreground service |
 
 ### Session Detection Logic
 ```
 1. Geofence ENTER event fires
 2. Start dwell timer — confirm location every 1 min
-3. If within 100m of charger for >= 3 consecutive minutes:
+3. If within 100m of charger for >= 2 consecutive minutes:
    → Promote to foreground service
    → Start charging session (use favorite car)
    → Show "Charging started" notification with progress
 4. While session is active (foreground service):
-   → Poll location every 1 min
+   → Poll location every 40 sec
    → Recalculate estimated end time
 5. End session when:
    a. User re-enters the geofence after being >100m away for
       >15 minutes → endReason=USER_LEFT (assumes they returned
-      to unplug; a new session may start after the normal 3-min
+      to unplug; a new session may start after the normal 2-min
       dwell detection)
    b. Estimated charge target reached → endReason=TARGET_REACHED
    c. User manually ends → endReason=MANUAL

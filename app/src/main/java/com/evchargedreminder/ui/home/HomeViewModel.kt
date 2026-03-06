@@ -64,7 +64,7 @@ class HomeViewModel @Inject constructor(
 
     companion object {
         private const val REFRESH_INTERVAL_MS = 30_000L // 30 seconds
-        private const val AUTO_START_DWELL_SECONDS = 180L // 3 minutes
+        private const val AUTO_START_DWELL_SECONDS = 120L // 2 minutes
     }
 
     init {

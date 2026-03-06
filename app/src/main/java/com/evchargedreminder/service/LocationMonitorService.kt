@@ -30,7 +30,7 @@ class LocationMonitorService : Service() {
         const val EXTRA_SESSION_ID = "session_id"
         const val EXTRA_START_PCT = "start_pct"
         const val EXTRA_TARGET_PCT = "target_pct"
-        private const val POLL_INTERVAL_MS = 60_000L // 1 minute
+        private const val POLL_INTERVAL_MS = 40_000L // 40 seconds
     }
 
     @Inject lateinit var manageSession: ManageSessionUseCase

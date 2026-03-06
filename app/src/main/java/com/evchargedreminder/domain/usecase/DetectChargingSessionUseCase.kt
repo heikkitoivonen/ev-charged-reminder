@@ -90,7 +90,7 @@ class DetectChargingSessionUseCase @Inject constructor(
      * session exists for this charger, and not in cooldown period.
      */
     suspend fun shouldStartSession(charger: Charger, dwellMinutes: Int): Boolean {
-        if (dwellMinutes < 3) return false
+        if (dwellMinutes < 2) return false
         val activeSessions = chargingSessionRepository.getActiveSessions()
         if (activeSessions.any { it.chargerId == charger.id }) return false
         if (isInCooldownPeriod(charger.id)) return false

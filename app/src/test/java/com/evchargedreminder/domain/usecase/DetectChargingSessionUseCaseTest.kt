@@ -73,12 +73,12 @@ class DetectChargingSessionUseCaseTest {
     }
 
     @Test
-    fun `shouldStartSession returns true after 3 min dwell`() = runTest {
+    fun `shouldStartSession returns true after 2 min dwell`() = runTest {
         val charger = testCharger()
         val id = fakeChargerRepo.insert(charger)
         val savedCharger = fakeChargerRepo.getById(id)!!
 
-        assertTrue(useCase.shouldStartSession(savedCharger, 3))
+        assertTrue(useCase.shouldStartSession(savedCharger, 2))
     }
 
     @Test
@@ -87,7 +87,7 @@ class DetectChargingSessionUseCaseTest {
         val id = fakeChargerRepo.insert(charger)
         val savedCharger = fakeChargerRepo.getById(id)!!
 
-        assertEquals(false, useCase.shouldStartSession(savedCharger, 2))
+        assertEquals(false, useCase.shouldStartSession(savedCharger, 1))
     }
 
     @Test
