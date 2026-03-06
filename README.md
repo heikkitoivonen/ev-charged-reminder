@@ -6,7 +6,15 @@ No ads. No accounts. No telemetry. All data stays on your device.
 
 ## Screenshots
 
-<!-- TODO: Add screenshots -->
+<p>
+<img src="screenshots/home_pending.jpg" width="250" alt="Home - pending">
+<img src="screenshots/home_charging.jpg" width="250" alt="Home - charging">
+<img src="screenshots/cars.jpg" width="250" alt="Car list">
+<img src="screenshots/edit_car.jpg" width="250" alt="Edit car">
+<img src="screenshots/chargers.jpg" width="250" alt="Charger list">
+<img src="screenshots/edit_charger.jpg" width="250" alt="Edit charger">
+<img src="screenshots/history.jpg" width="250" alt="Session history">
+</p>
 
 ## Features
 
