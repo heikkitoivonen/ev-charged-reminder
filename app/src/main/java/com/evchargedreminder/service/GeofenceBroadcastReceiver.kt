@@ -30,7 +30,7 @@ class GeofenceBroadcastReceiver : BroadcastReceiver() {
     private fun enqueueDwellCheck(context: Context, chargerId: Long) {
         val inputData = Data.Builder()
             .putLong(DwellCheckWorker.KEY_CHARGER_ID, chargerId)
-            .putInt(DwellCheckWorker.KEY_DWELL_COUNT, 0)
+            .putLong(DwellCheckWorker.KEY_ENTRY_TIME, System.currentTimeMillis())
             .build()
 
         val workRequest = OneTimeWorkRequestBuilder<DwellCheckWorker>()
