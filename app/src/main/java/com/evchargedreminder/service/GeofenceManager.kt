@@ -13,10 +13,15 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
+interface GeofenceManager {
+    fun registerGeofences(chargers: List<Charger>)
+    fun unregisterAll()
+}
+
 @Singleton
-class GeofenceManager @Inject constructor(
+class GeofenceManagerImpl @Inject constructor(
     @ApplicationContext private val context: Context
-) {
+) : GeofenceManager {
 
     private val geofencingClient: GeofencingClient =
         LocationServices.getGeofencingClient(context)
@@ -30,7 +35,7 @@ class GeofenceManager @Inject constructor(
     }
 
     @SuppressLint("MissingPermission")
-    fun registerGeofences(chargers: List<Charger>) {
+    override fun registerGeofences(chargers: List<Charger>) {
         if (chargers.isEmpty()) return
 
         val geofences = chargers.map { charger ->
@@ -56,7 +61,7 @@ class GeofenceManager @Inject constructor(
         geofencingClient.addGeofences(request, geofencePendingIntent)
     }
 
-    fun unregisterAll() {
+    override fun unregisterAll() {
         geofencingClient.removeGeofences(geofencePendingIntent)
     }
 }

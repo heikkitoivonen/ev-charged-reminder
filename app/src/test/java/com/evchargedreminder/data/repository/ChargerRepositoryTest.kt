@@ -2,7 +2,9 @@ package com.evchargedreminder.data.repository
 
 import com.evchargedreminder.data.local.dao.ChargerDao
 import com.evchargedreminder.data.local.entity.ChargerEntity
+import com.evchargedreminder.domain.model.Charger
 import com.evchargedreminder.domain.model.ChargerType
+import com.evchargedreminder.service.GeofenceManager
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -24,7 +26,7 @@ class ChargerRepositoryTest {
     @Before
     fun setup() {
         fakeDao = FakeChargerDao()
-        repository = ChargerRepositoryImpl(fakeDao)
+        repository = ChargerRepositoryImpl(fakeDao, FakeGeofenceManager())
     }
 
     @Test
@@ -75,6 +77,11 @@ class ChargerRepositoryTest {
         chargerType = type,
         createdAt = Instant.now()
     )
+}
+
+private class FakeGeofenceManager : GeofenceManager {
+    override fun registerGeofences(chargers: List<Charger>) { /* no-op */ }
+    override fun unregisterAll() { /* no-op */ }
 }
 
 private class FakeChargerDao : ChargerDao {

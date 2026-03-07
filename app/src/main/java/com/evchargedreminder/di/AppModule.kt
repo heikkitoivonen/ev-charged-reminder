@@ -8,6 +8,8 @@ import com.evchargedreminder.data.repository.ChargerRepository
 import com.evchargedreminder.data.repository.ChargerRepositoryImpl
 import com.evchargedreminder.data.repository.ChargingSessionRepository
 import com.evchargedreminder.data.repository.ChargingSessionRepositoryImpl
+import com.evchargedreminder.service.GeofenceManager
+import com.evchargedreminder.service.GeofenceManagerImpl
 import com.evchargedreminder.service.SessionServiceLauncher
 import com.evchargedreminder.service.SessionServiceLauncherImpl
 import com.evchargedreminder.util.FusedLocationProvider
@@ -40,4 +42,7 @@ abstract class AppModule {
 
     @Binds
     abstract fun bindSessionServiceLauncher(impl: SessionServiceLauncherImpl): SessionServiceLauncher
+
+    @Binds
+    abstract fun bindGeofenceManager(impl: GeofenceManagerImpl): GeofenceManager
 }
