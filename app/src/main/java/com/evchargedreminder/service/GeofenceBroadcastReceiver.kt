@@ -16,20 +16,14 @@ class GeofenceBroadcastReceiver : BroadcastReceiver() {
         if (geofencingEvent.hasError()) return
 
         when (geofencingEvent.geofenceTransition) {
+            Geofence.GEOFENCE_TRANSITION_ENTER,
             Geofence.GEOFENCE_TRANSITION_DWELL -> {
-                // Platform confirmed 2-minute dwell — start session directly
+                // Start session immediately on any geofence entry or dwell event.
+                // Background location updates are infrequent, so we don't wait.
                 val triggeringGeofences = geofencingEvent.triggeringGeofences ?: return
                 for (geofence in triggeringGeofences) {
                     val chargerId = geofence.requestId.toLongOrNull() ?: continue
                     enqueueSessionStart(context, chargerId)
-                }
-            }
-            Geofence.GEOFENCE_TRANSITION_ENTER -> {
-                // Fallback: enqueue DwellCheckWorker in case DWELL event is delayed
-                val triggeringGeofences = geofencingEvent.triggeringGeofences ?: return
-                for (geofence in triggeringGeofences) {
-                    val chargerId = geofence.requestId.toLongOrNull() ?: continue
-                    enqueueDwellCheck(context, chargerId)
                 }
             }
             // EXIT is a no-op — session end is handled by the foreground service polling
@@ -39,20 +33,6 @@ class GeofenceBroadcastReceiver : BroadcastReceiver() {
     private fun enqueueSessionStart(context: Context, chargerId: Long) {
         val inputData = Data.Builder()
             .putLong(DwellCheckWorker.KEY_CHARGER_ID, chargerId)
-            .putLong(DwellCheckWorker.KEY_ENTRY_TIME, 0L) // signals dwell already confirmed
-            .build()
-
-        val workRequest = OneTimeWorkRequestBuilder<DwellCheckWorker>()
-            .setInputData(inputData)
-            .build()
-
-        WorkManager.getInstance(context).enqueue(workRequest)
-    }
-
-    private fun enqueueDwellCheck(context: Context, chargerId: Long) {
-        val inputData = Data.Builder()
-            .putLong(DwellCheckWorker.KEY_CHARGER_ID, chargerId)
-            .putLong(DwellCheckWorker.KEY_ENTRY_TIME, System.currentTimeMillis())
             .build()
 
         val workRequest = OneTimeWorkRequestBuilder<DwellCheckWorker>()
