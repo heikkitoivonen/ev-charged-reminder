@@ -4,7 +4,6 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import androidx.core.app.NotificationCompat
@@ -51,9 +50,7 @@ class ChargingNotificationManager @Inject constructor(
         manager.createNotificationChannel(alertChannel)
     }
 
-    private fun explicitMainActivityIntent(): Intent = Intent().apply {
-        component = ComponentName(context, MainActivity::class.java)
-    }
+    private fun explicitMainActivityIntent(): Intent = Intent(context, MainActivity::class.java)
 
     fun buildForegroundNotification(
         chargerName: String,
@@ -65,8 +62,7 @@ class ChargingNotificationManager @Inject constructor(
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
-        val endSessionIntent = Intent().apply {
-            component = ComponentName(context, LocationMonitorService::class.java)
+        val endSessionIntent = Intent(context, LocationMonitorService::class.java).apply {
             action = LocationMonitorService.ACTION_END_SESSION
         }
         val endIntent = PendingIntent.getService(
