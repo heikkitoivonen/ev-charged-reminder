@@ -108,6 +108,7 @@ class DetectChargingSessionUseCase @Inject constructor(
         if (!skipCooldown && isInCooldownPeriod(charger.id)) return null
 
         val car = carRepository.getFavorite() ?: return null
+        if (activeSessions.any { it.carId == car.id }) return null
         if (car.defaultStartPct >= car.defaultTargetPct) return null
 
         val estimatedMinutes = ChargingCurve.estimateChargingTimeMinutes(
