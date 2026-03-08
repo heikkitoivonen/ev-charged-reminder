@@ -16,7 +16,16 @@ class GeofenceBroadcastReceiver : BroadcastReceiver() {
         if (geofencingEvent.hasError()) return
 
         when (geofencingEvent.geofenceTransition) {
+            Geofence.GEOFENCE_TRANSITION_DWELL -> {
+                // Platform confirmed 2-minute dwell — start session directly
+                val triggeringGeofences = geofencingEvent.triggeringGeofences ?: return
+                for (geofence in triggeringGeofences) {
+                    val chargerId = geofence.requestId.toLongOrNull() ?: continue
+                    enqueueSessionStart(context, chargerId)
+                }
+            }
             Geofence.GEOFENCE_TRANSITION_ENTER -> {
+                // Fallback: enqueue DwellCheckWorker in case DWELL event is delayed
                 val triggeringGeofences = geofencingEvent.triggeringGeofences ?: return
                 for (geofence in triggeringGeofences) {
                     val chargerId = geofence.requestId.toLongOrNull() ?: continue
@@ -25,6 +34,19 @@ class GeofenceBroadcastReceiver : BroadcastReceiver() {
             }
             // EXIT is a no-op — session end is handled by the foreground service polling
         }
+    }
+
+    private fun enqueueSessionStart(context: Context, chargerId: Long) {
+        val inputData = Data.Builder()
+            .putLong(DwellCheckWorker.KEY_CHARGER_ID, chargerId)
+            .putLong(DwellCheckWorker.KEY_ENTRY_TIME, 0L) // signals dwell already confirmed
+            .build()
+
+        val workRequest = OneTimeWorkRequestBuilder<DwellCheckWorker>()
+            .setInputData(inputData)
+            .build()
+
+        WorkManager.getInstance(context).enqueue(workRequest)
     }
 
     private fun enqueueDwellCheck(context: Context, chargerId: Long) {

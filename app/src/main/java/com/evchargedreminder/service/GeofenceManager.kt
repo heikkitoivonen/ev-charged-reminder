@@ -34,6 +34,10 @@ class GeofenceManagerImpl @Inject constructor(
         )
     }
 
+    companion object {
+        private const val LOITERING_DELAY_MS = 120_000 // 2 minutes
+    }
+
     @SuppressLint("MissingPermission")
     override fun registerGeofences(chargers: List<Charger>) {
         if (chargers.isEmpty()) return
@@ -47,8 +51,11 @@ class GeofenceManagerImpl @Inject constructor(
                     charger.radiusMeters.toFloat()
                 )
                 .setExpirationDuration(Geofence.NEVER_EXPIRE)
+                .setLoiteringDelay(LOITERING_DELAY_MS)
                 .setTransitionTypes(
-                    Geofence.GEOFENCE_TRANSITION_ENTER or Geofence.GEOFENCE_TRANSITION_EXIT
+                    Geofence.GEOFENCE_TRANSITION_ENTER or
+                        Geofence.GEOFENCE_TRANSITION_DWELL or
+                        Geofence.GEOFENCE_TRANSITION_EXIT
                 )
                 .build()
         }

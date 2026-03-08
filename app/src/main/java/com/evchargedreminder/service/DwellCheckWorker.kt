@@ -8,6 +8,7 @@ import androidx.work.Data
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import com.evchargedreminder.domain.model.Charger
 import com.evchargedreminder.domain.usecase.DetectChargingSessionUseCase
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -32,26 +33,27 @@ class DwellCheckWorker @AssistedInject constructor(
         if (chargerId == -1L) return Result.failure()
 
         val entryTime = inputData.getLong(KEY_ENTRY_TIME, System.currentTimeMillis())
+        val dwellConfirmed = entryTime == 0L // DWELL transition already confirmed by platform
 
+        if (dwellConfirmed) {
+            // Platform confirmed dwell — start session using charger from DB
+            val charger = findCharger(chargerId)
+            if (charger != null) {
+                tryStartSession(charger)
+            }
+            return Result.success()
+        }
+
+        // Fallback: manual dwell check via proximity polling
         val proximity = detectSession.checkProximity()
         val nearCharger = proximity.nearestCharger
 
         if (nearCharger != null && nearCharger.id == chargerId) {
             val elapsedMs = System.currentTimeMillis() - entryTime
-            val dwellMinutes = (elapsedMs / 60_000).toInt()
 
             if (elapsedMs >= DWELL_TIME_MS) {
-                // Dwell threshold met — start session
-                if (detectSession.shouldStartSession(nearCharger, dwellMinutes.coerceAtLeast(3))) {
-                    val session = detectSession.startSession(nearCharger)
-                    if (session != null) {
-                        // Start foreground service
-                        val serviceIntent = Intent(applicationContext, LocationMonitorService::class.java).apply {
-                            action = LocationMonitorService.ACTION_START_SESSION
-                            putExtra(LocationMonitorService.EXTRA_SESSION_ID, session.id)
-                        }
-                        applicationContext.startForegroundService(serviceIntent)
-                    }
+                if (detectSession.shouldStartSession(nearCharger, (elapsedMs / 60_000).toInt().coerceAtLeast(3))) {
+                    tryStartSession(nearCharger)
                 }
                 return Result.success()
             }
@@ -59,9 +61,25 @@ class DwellCheckWorker @AssistedInject constructor(
             // Schedule next check in 30 seconds
             scheduleNextCheck(chargerId, entryTime)
         }
-        // If not near charger, dwell resets — don't schedule further checks
 
         return Result.success()
+    }
+
+    private suspend fun findCharger(chargerId: Long): Charger? {
+        val proximity = detectSession.checkProximity()
+        return proximity.nearestCharger?.takeIf { it.id == chargerId }
+            ?: detectSession.checkAllNearby().find { it.charger.id == chargerId }?.charger
+    }
+
+    private suspend fun tryStartSession(charger: Charger) {
+        val session = detectSession.startSession(charger)
+        if (session != null) {
+            val serviceIntent = Intent(applicationContext, LocationMonitorService::class.java).apply {
+                action = LocationMonitorService.ACTION_START_SESSION
+                putExtra(LocationMonitorService.EXTRA_SESSION_ID, session.id)
+            }
+            applicationContext.startForegroundService(serviceIntent)
+        }
     }
 
     private fun scheduleNextCheck(chargerId: Long, entryTime: Long) {
