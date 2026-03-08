@@ -23,7 +23,8 @@ class ChargingNotificationManager @Inject constructor(
         const val CHANNEL_ALERTS = "charging_alerts"
         const val FOREGROUND_NOTIFICATION_ID = 1001
         const val ALERT_NOTIFICATION_ID = 1002
-        const val SESSION_ENDED_NOTIFICATION_ID = 1003
+        const val SESSION_STARTED_NOTIFICATION_ID = 1003
+        const val SESSION_ENDED_NOTIFICATION_ID = 1004
         const val EXTRA_SHOW_OVERRIDE = "show_override"
     }
 
@@ -89,6 +90,34 @@ class ChargingNotificationManager @Inject constructor(
                 endIntent
             )
             .build()
+    }
+
+    fun sendSessionStartedNotification(chargerName: String, estimatedMinutes: Long) {
+        val contentIntent = explicitMainActivityIntent().apply {
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val timeText = if (estimatedMinutes > 0) {
+            "Estimated time: ${estimatedMinutes}min"
+        } else {
+            "Estimating charge time..."
+        }
+        val notification = NotificationCompat.Builder(context, CHANNEL_ALERTS)
+            .setSmallIcon(android.R.drawable.ic_lock_idle_charging)
+            .setContentTitle("Charging started at $chargerName")
+            .setContentText("$timeText — tap to adjust settings")
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .setContentIntent(
+                PendingIntent.getActivity(
+                    context, 2,
+                    contentIntent,
+                    PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+                )
+            )
+            .build()
+
+        val manager = context.getSystemService(NotificationManager::class.java)
+        manager.notify(SESSION_STARTED_NOTIFICATION_ID, notification)
     }
 
     fun sendChargingAlertNotification(minutesRemaining: Long) {

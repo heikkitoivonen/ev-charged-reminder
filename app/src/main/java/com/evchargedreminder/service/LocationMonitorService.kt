@@ -99,10 +99,12 @@ class LocationMonitorService : Service() {
             val session = chargingSessionRepository.getById(sessionId) ?: return@launch
             val charger = chargerRepository.getById(session.chargerId) ?: return@launch
 
+            val estimatedMinutes = manageSession.getEstimatedMinutesRemaining(session)
+
             // Start as foreground service
             val notification = notificationManager.buildForegroundNotification(
                 chargerName = charger.name,
-                estimatedMinutesLeft = manageSession.getEstimatedMinutesRemaining(session)
+                estimatedMinutesLeft = estimatedMinutes
             )
             ServiceCompat.startForeground(
                 this@LocationMonitorService,
@@ -110,6 +112,9 @@ class LocationMonitorService : Service() {
                 notification,
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
             )
+
+            // Pop up a heads-up notification so the user knows charging started
+            notificationManager.sendSessionStartedNotification(charger.name, estimatedMinutes)
 
             // Start polling loop
             pollingJob = serviceScope.launch {
