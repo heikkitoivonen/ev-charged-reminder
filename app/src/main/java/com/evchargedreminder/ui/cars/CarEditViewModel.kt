@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.evchargedreminder.data.bundled.BundledEvData
 import com.evchargedreminder.data.repository.CarRepository
+import com.evchargedreminder.util.ChargingCurve
 import com.evchargedreminder.domain.model.Car
 import com.evchargedreminder.ui.navigation.CarEditRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -171,9 +172,11 @@ class CarEditViewModel @Inject constructor(
             matches.singleOrNull()
         } ?: return
 
+        val degradedCapacity = ChargingCurve.applyBatteryDegradation(match.batteryCapacityKwh, state.year)
+
         _uiState.update {
             it.copy(
-                batteryCapacityKwh = match.batteryCapacityKwh.toString(),
+                batteryCapacityKwh = degradedCapacity.toString(),
                 isHybrid = match.isHybrid,
                 defaultStartPct = if (match.isHybrid) 0 else 20,
                 defaultTargetPct = if (match.isHybrid) 100 else 80,

@@ -70,6 +70,21 @@ object ChargingCurve {
         return kwhNeeded / effectiveRateKw
     }
 
+    /**
+     * Estimates usable battery capacity after degradation.
+     * 3% per year for the first 2 years, then 1% per year after that.
+     */
+    fun applyBatteryDegradation(originalKwh: Double, modelYear: Int): Double {
+        val currentYear = java.time.Year.now().value
+        val age = (currentYear - modelYear).coerceAtLeast(0)
+        val degradation = if (age <= 2) {
+            0.03 * age
+        } else {
+            0.06 + 0.01 * (age - 2)
+        }
+        return Math.round(originalKwh * (1.0 - degradation) * 10.0) / 10.0
+    }
+
     private fun estimateDcHours(
         batteryCapacityKwh: Double,
         startPct: Int,

@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.evchargedreminder.data.OnboardingPreferences
 import com.evchargedreminder.data.bundled.BundledEvData
 import com.evchargedreminder.data.repository.CarRepository
+import com.evchargedreminder.util.ChargingCurve
 import com.evchargedreminder.data.repository.ChargerRepository
 import com.evchargedreminder.domain.model.Car
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -148,9 +149,11 @@ class OnboardingViewModel @Inject constructor(
             matches.singleOrNull()
         } ?: return
 
+        val degradedCapacity = ChargingCurve.applyBatteryDegradation(match.batteryCapacityKwh, state.year)
+
         _uiState.update {
             it.copy(
-                batteryCapacityKwh = match.batteryCapacityKwh.toString(),
+                batteryCapacityKwh = degradedCapacity.toString(),
                 isHybrid = match.isHybrid,
                 autoFilled = true
             )
