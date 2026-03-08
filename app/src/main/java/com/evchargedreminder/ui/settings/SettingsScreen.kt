@@ -140,7 +140,7 @@ fun SettingsScreen(
 
             // App info
             Text("EV Charged Reminder", style = MaterialTheme.typography.headlineSmall)
-            Text("Version 1.0", style = MaterialTheme.typography.bodyMedium,
+            Text("Version ${com.evchargedreminder.BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text("\u00a9 2026 Heikki Toivonen", style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
