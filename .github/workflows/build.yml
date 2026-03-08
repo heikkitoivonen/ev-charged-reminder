@@ -55,3 +55,17 @@ jobs:
         with:
           name: debug-apk
           path: app/build/outputs/apk/debug/*.apk
+
+      - name: Publish to latest release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mv app/build/outputs/apk/release/*.apk app/build/outputs/apk/release/ev-charged-reminder.apk
+          gh release delete latest --yes || true
+          git tag -f latest
+          git push -f origin latest
+          gh release create latest app/build/outputs/apk/release/ev-charged-reminder.apk \
+            --title "Latest Build" \
+            --notes "Automatically built from the latest commit on main." \
+            --prerelease

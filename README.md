@@ -4,6 +4,8 @@ A free, open-source Android app that automatically detects when you're charging 
 
 No ads. No accounts. No telemetry. All data stays on your device.
 
+**[Download latest APK](https://github.com/heikkitoivonen/ev-charged-reminder/releases/latest/download/ev-charged-reminder.apk)**
+
 ## Screenshots
 
 <p>
