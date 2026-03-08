@@ -56,7 +56,9 @@ class ChargingNotificationManager @Inject constructor(
     ): Notification {
         val contentIntent = PendingIntent.getActivity(
             context, 0,
-            Intent(context, MainActivity::class.java),
+            Intent(context, MainActivity::class.java).apply {
+                setPackage(context.packageName)
+            },
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
@@ -64,6 +66,7 @@ class ChargingNotificationManager @Inject constructor(
             context, 0,
             Intent(context, LocationMonitorService::class.java).apply {
                 action = LocationMonitorService.ACTION_END_SESSION
+                setPackage(context.packageName)
             },
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
@@ -91,6 +94,7 @@ class ChargingNotificationManager @Inject constructor(
     fun sendChargingAlertNotification(minutesRemaining: Long) {
         val overrideIntent = Intent(context, MainActivity::class.java).apply {
             putExtra(EXTRA_SHOW_OVERRIDE, true)
+            setPackage(context.packageName)
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
         val notification = NotificationCompat.Builder(context, CHANNEL_ALERTS)
@@ -119,6 +123,9 @@ class ChargingNotificationManager @Inject constructor(
             SessionEndReason.MANUAL -> "Session ended manually"
         }
 
+        val contentIntent = Intent(context, MainActivity::class.java).apply {
+            setPackage(context.packageName)
+        }
         val notification = NotificationCompat.Builder(context, CHANNEL_ALERTS)
             .setSmallIcon(android.R.drawable.ic_lock_idle_charging)
             .setContentTitle("Charging complete")
@@ -128,8 +135,8 @@ class ChargingNotificationManager @Inject constructor(
             .setContentIntent(
                 PendingIntent.getActivity(
                     context, 0,
-                    Intent(context, MainActivity::class.java),
-                    PendingIntent.FLAG_IMMUTABLE
+                    contentIntent,
+                    PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
                 )
             )
             .build()
