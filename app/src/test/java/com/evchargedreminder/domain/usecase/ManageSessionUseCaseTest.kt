@@ -65,18 +65,18 @@ class ManageSessionUseCaseTest {
     }
 
     @Test
-    fun `shouldEndByUserLeft returns true after 15 min away and re-entry`() {
-        assertTrue(useCase.shouldEndByUserLeft(isNearCharger = true, minutesAway = 16))
+    fun `shouldEndByUserLeft returns true when user returns after leaving`() {
+        assertTrue(useCase.shouldEndByUserLeft(isNearCharger = true, hasLeftArea = true))
     }
 
     @Test
-    fun `shouldEndByUserLeft returns false when away less than 15 min`() {
-        assertEquals(false, useCase.shouldEndByUserLeft(isNearCharger = true, minutesAway = 10))
+    fun `shouldEndByUserLeft returns false when user never left`() {
+        assertEquals(false, useCase.shouldEndByUserLeft(isNearCharger = true, hasLeftArea = false))
     }
 
     @Test
     fun `shouldEndByUserLeft returns false when not near charger`() {
-        assertEquals(false, useCase.shouldEndByUserLeft(isNearCharger = false, minutesAway = 20))
+        assertEquals(false, useCase.shouldEndByUserLeft(isNearCharger = false, hasLeftArea = true))
     }
 
     @Test

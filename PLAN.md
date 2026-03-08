@@ -183,16 +183,13 @@ foreground service only when a charging session is active or likely.
    → Poll location every 40 sec
    → Recalculate estimated end time
 5. End session when:
-   a. User re-enters the geofence after being away for
-      >15 minutes → endReason=USER_LEFT (assumes they returned
-      to unplug; a new session may start after detection)
+   a. User leaves the geofence and re-enters → endReason=USER_LEFT
+      (assumes they returned to unplug their car)
    b. Estimated charge target reached → endReason=TARGET_REACHED
    c. User manually ends → endReason=MANUAL
-   Note: the user's phone may leave the area while the car stays
-   plugged in (e.g., walking to a nearby store). Brief departures
-   (<15 min) do NOT end the session. Longer absences are fine too —
-   the session continues until TARGET_REACHED, MANUAL end, or the
-   user re-enters (triggering USER_LEFT).
+   Note: if the user stays away, the session continues until
+   TARGET_REACHED or MANUAL end. The session only ends on
+   re-entry, not on departure alone.
 6. On session end → stop foreground service, return to Tier 1
    → 15-minute cooldown prevents auto-restart for that charger
    → User can override cooldown with "Start Charging Anyway"

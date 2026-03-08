@@ -40,19 +40,14 @@ class ManageSessionUseCase @Inject constructor(
 
     /**
      * Determines if a session should end because the user left and came back.
-     * Returns true if the user re-entered the charger area after being away
-     * for more than 15 minutes.
-     *
-     * @param isNearCharger whether the user is currently within the charger radius
-     * @param minutesAway how many minutes the user has been outside the radius
-     *        (0 if currently near, accumulated while away)
+     * Returns true if the user re-entered the charger area after having left.
+     * This assumes the user returned to unplug their car.
      */
     fun shouldEndByUserLeft(
         isNearCharger: Boolean,
-        minutesAway: Long
+        hasLeftArea: Boolean
     ): Boolean {
-        // User re-entered after being away >15 min
-        return isNearCharger && minutesAway > 15
+        return isNearCharger && hasLeftArea
     }
 
     /**

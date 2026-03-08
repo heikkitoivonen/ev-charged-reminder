@@ -18,8 +18,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.time.Duration
-import java.time.Instant
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -43,8 +41,7 @@ class LocationMonitorService : Service() {
 
     private val serviceScope = CoroutineScope(Dispatchers.Default + Job())
     private var pollingJob: Job? = null
-    private var departedAt: Instant? = null
-    private var wasNearCharger = true
+    private var hasLeftArea = false
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -152,24 +149,14 @@ class LocationMonitorService : Service() {
             true
         }
 
-        // Track departure
+        // Track departure and return
         if (!isNearCharger) {
-            if (departedAt == null) departedAt = Instant.now()
-            wasNearCharger = false
-        } else if (!wasNearCharger) {
-            // User just came back — check how long they were away
-            val minutesAway = departedAt?.let {
-                Duration.between(it, Instant.now()).toMinutes()
-            } ?: 0L
-            if (manageSession.shouldEndByUserLeft(isNearCharger = true, minutesAway = minutesAway)) {
-                manageSession.endSession(session.id, SessionEndReason.USER_LEFT)
-                notificationManager.sendSessionEndedNotification(SessionEndReason.USER_LEFT)
-                stopSelf()
-                return
-            }
-            // Brief departure — reset tracker
-            departedAt = null
-            wasNearCharger = true
+            hasLeftArea = true
+        } else if (manageSession.shouldEndByUserLeft(isNearCharger = true, hasLeftArea = hasLeftArea)) {
+            manageSession.endSession(session.id, SessionEndReason.USER_LEFT)
+            notificationManager.sendSessionEndedNotification(SessionEndReason.USER_LEFT)
+            stopSelf()
+            return
         }
 
         // Check if target reached
