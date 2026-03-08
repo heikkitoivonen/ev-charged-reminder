@@ -150,44 +150,42 @@ Use a **non-intrusive background approach** for passive monitoring, upgrading to
 foreground service only when a charging session is active or likely.
 
 #### Tier 1 — Passive Monitoring (no foreground service)
-- Use **Geofencing API** to register geofences (100 m radius) around all saved charger locations.
-- When a geofence ENTER event fires, start a **short-lived WorkManager task** to confirm
-  proximity and begin the 2-minute dwell timer.
-- Additionally, use **periodic WorkManager** (every 15 min) as a heartbeat to re-register
-  geofences if needed (geofences can be lost on reboot / Play Services update).
+- Use **Geofencing API** to register geofences around all saved charger locations,
+  with both ENTER and DWELL transitions (2-minute loitering delay).
+- When a geofence event fires, start a **short-lived WorkManager task** to confirm
+  proximity and immediately start a charging session.
+- Geofences are automatically re-registered when chargers are added, updated, or deleted,
+  and on device boot.
 - No persistent notification — completely invisible to the user.
 
 #### Tier 2 — Active Session (foreground service)
-- When the user has been within a charger geofence for **≥ 2 minutes** (confirmed by
-  location checks), promote to a **foreground service** with a notification showing
-  charging status, progress, and ETA.
+- When a charging session starts, promote to a **foreground service** with a notification
+  showing charging status, progress, and ETA.
 - The foreground service polls location at **40-second intervals** for accurate session
   tracking and auto-end detection.
 - The foreground service stops (drops back to Tier 1) when the session ends.
 
-### Adaptive Polling (Tier 1 — within geofence, pre-session)
+### Adaptive Polling
 | State | Poll interval | Method |
 |---|---|---|
 | Outside all geofences | No polling | Geofence API triggers on entry |
-| Entered geofence, dwell timer running | 1 minute | WorkManager / short alarm |
 | Session active (Tier 2) | 40 seconds | Foreground service |
 
 ### Session Detection Logic
 ```
-1. Geofence ENTER event fires
-2. Start dwell timer — confirm location every 1 min
-3. If within 100m of charger for >= 2 consecutive minutes:
+1. Geofence ENTER or DWELL event fires
+2. WorkManager task confirms proximity to charger
+3. Start charging session immediately (use favorite car):
    → Promote to foreground service
-   → Start charging session (use favorite car)
    → Show "Charging started" notification with progress
+   → At most one active session per car
 4. While session is active (foreground service):
    → Poll location every 40 sec
    → Recalculate estimated end time
 5. End session when:
-   a. User re-enters the geofence after being >100m away for
+   a. User re-enters the geofence after being away for
       >15 minutes → endReason=USER_LEFT (assumes they returned
-      to unplug; a new session may start after the normal 2-min
-      dwell detection)
+      to unplug; a new session may start after detection)
    b. Estimated charge target reached → endReason=TARGET_REACHED
    c. User manually ends → endReason=MANUAL
    Note: the user's phone may leave the area while the car stays
@@ -196,6 +194,8 @@ foreground service only when a charging session is active or likely.
    the session continues until TARGET_REACHED, MANUAL end, or the
    user re-enters (triggering USER_LEFT).
 6. On session end → stop foreground service, return to Tier 1
+   → 15-minute cooldown prevents auto-restart for that charger
+   → User can override cooldown with "Start Charging Anyway"
 ```
 
 ### Notification Schedule (near completion)
@@ -423,7 +423,7 @@ app/src/test/java/com/evchargedreminder/     # Unit tests (JVM, no device)
 ### Phase 4 — Location Monitoring & Session Detection
 - Geofencing (Tier 1) + foreground service (Tier 2)
 - Adaptive polling logic
-- Session auto-start after 3 min in range
+- Session auto-start on geofence entry
 - Session auto-end logic
 - Tests: DetectChargingSessionUseCaseTest, ManageSessionUseCaseTest
 

@@ -20,7 +20,7 @@ No ads. No accounts. No telemetry. All data stays on your device.
 
 ## Features
 
-- **Automatic session detection** — The app detects when you arrive at a saved charger location and starts a charging session automatically after a 2-minute dwell.
+- **Automatic session detection** — The app detects when you arrive at a saved charger location and starts a charging session automatically.
 - **Smart charge time estimates** — Uses realistic charging curves for both AC (Level 1/2) and DC fast charging, accounting for battery taper at high state of charge.
 - **Configurable notifications** — Get alerted when charging is nearly complete so you can move your car promptly.
 - **Multiple cars and chargers** — Save all your vehicles and charging locations. Set a favorite/default car for automatic session creation.
@@ -71,7 +71,7 @@ The debug APK will be at `app/build/outputs/apk/debug/app-debug.apk`.
 
 1. **Add your car** — Select from the bundled EV database or enter details manually.
 2. **Add your charger** — Use your current location or pick a spot on the map. Set the charger type and geofence radius.
-3. **Just drive** — When you park near a saved charger for 2+ minutes, a charging session starts automatically with a progress notification.
+3. **Just drive** — When you park near a saved charger, a charging session starts automatically with a progress notification.
 4. **Get notified** — The app estimates when charging will finish and alerts you before it's done.
 5. **Session ends automatically** — When you leave the charger area or the target is reached, the session closes.
 
