@@ -7,6 +7,10 @@ plugins {
     id("org.jetbrains.kotlin.plugin.serialization")
 }
 
+val gitCommitCount = providers.exec {
+    commandLine("git", "rev-list", "--count", "HEAD")
+}.standardOutput.asText.get().trim().toIntOrNull() ?: 1
+
 android {
     namespace = "com.evchargedreminder"
     compileSdk = 35
@@ -15,8 +19,8 @@ android {
         applicationId = "com.evchargedreminder"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = gitCommitCount
+        versionName = "1.0.${gitCommitCount}"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
