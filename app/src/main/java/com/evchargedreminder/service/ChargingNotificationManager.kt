@@ -4,6 +4,7 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import androidx.core.app.NotificationCompat
@@ -50,24 +51,27 @@ class ChargingNotificationManager @Inject constructor(
         manager.createNotificationChannel(alertChannel)
     }
 
+    private fun explicitMainActivityIntent(): Intent = Intent().apply {
+        component = ComponentName(context, MainActivity::class.java)
+    }
+
     fun buildForegroundNotification(
         chargerName: String,
         estimatedMinutesLeft: Long
     ): Notification {
         val contentIntent = PendingIntent.getActivity(
             context, 0,
-            Intent(context, MainActivity::class.java).apply {
-                setPackage(context.packageName)
-            },
+            explicitMainActivityIntent(),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
+        val endSessionIntent = Intent().apply {
+            component = ComponentName(context, LocationMonitorService::class.java)
+            action = LocationMonitorService.ACTION_END_SESSION
+        }
         val endIntent = PendingIntent.getService(
             context, 0,
-            Intent(context, LocationMonitorService::class.java).apply {
-                action = LocationMonitorService.ACTION_END_SESSION
-                setPackage(context.packageName)
-            },
+            endSessionIntent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
@@ -92,9 +96,8 @@ class ChargingNotificationManager @Inject constructor(
     }
 
     fun sendChargingAlertNotification(minutesRemaining: Long) {
-        val overrideIntent = Intent(context, MainActivity::class.java).apply {
+        val overrideIntent = explicitMainActivityIntent().apply {
             putExtra(EXTRA_SHOW_OVERRIDE, true)
-            setPackage(context.packageName)
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
         val notification = NotificationCompat.Builder(context, CHANNEL_ALERTS)
@@ -123,9 +126,6 @@ class ChargingNotificationManager @Inject constructor(
             SessionEndReason.MANUAL -> "Session ended manually"
         }
 
-        val contentIntent = Intent(context, MainActivity::class.java).apply {
-            setPackage(context.packageName)
-        }
         val notification = NotificationCompat.Builder(context, CHANNEL_ALERTS)
             .setSmallIcon(android.R.drawable.ic_lock_idle_charging)
             .setContentTitle("Charging complete")
@@ -135,7 +135,7 @@ class ChargingNotificationManager @Inject constructor(
             .setContentIntent(
                 PendingIntent.getActivity(
                     context, 0,
-                    contentIntent,
+                    explicitMainActivityIntent(),
                     PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
                 )
             )
