@@ -75,6 +75,10 @@ The debug APK will be at `app/build/outputs/apk/debug/app-debug.apk`.
 4. **Get notified** — The app estimates when charging will finish and alerts you before it's done.
 5. **Session ends automatically** — When you leave the charger area or the target is reached, the session closes.
 
+## Privacy
+
+See [Privacy Policy](PRIVACY_POLICY.md). In short: no data is collected, transmitted, or shared. Everything stays on your device.
+
 ## License
 
 [MIT License](LICENSE.txt) — Copyright 2026 Heikki Toivonen
